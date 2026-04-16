@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Martinelli Autos | ERP 2026</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {} }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom CSS for Animations & Scrollbars -->
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
+    .dark ::-webkit-scrollbar-thumb { background-color: #334155; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    .slide-up { animation: slideUp 0.5s ease-out forwards; }
+    
+    .toggle-checkbox:checked { right: 0; border-color: #6366f1; }
+    .toggle-checkbox:checked + .toggle-label { background-color: #6366f1; }
+    .toggle-checkbox { right: 0; z-index: 1; border-color: #e2e8f0; transition: all 0.3s; }
+    .toggle-label { width: 3.5rem; height: 2rem; background-color: #cbd5e1; border-radius: 9999px; transition: all 0.3s; }
+  </style>
+</head>
+<body class="bg-[#f8fafc] dark:bg-slate-950 text-slate-900 dark:text-white font-sans selection:bg-indigo-100 selection:text-indigo-900 dark:selection:bg-indigo-900/50 dark:selection:text-white pb-20 transition-colors duration-300">
+
+  <!-- Ambient Background -->
+  <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+    <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-200/40 dark:bg-blue-900/20 rounded-full blur-[120px]"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-200/40 dark:bg-indigo-900/20 rounded-full blur-[120px]"></div>
+  </div>
+
+  <!-- PANTALLA DE LOGIN -->
+  <div id="auth-wrapper" class="relative z-50 flex items-center justify-center min-h-screen bg-slate-900/40 backdrop-blur-xl">
+    <div class="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl w-full max-w-md border border-white/20 dark:border-slate-800 fade-in">
+       <div class="flex justify-center mb-6">
+         <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg"><i data-lucide="car" class="w-8 h-8 text-white"></i></div>
+       </div>
+       <h2 class="text-2xl font-black text-center mb-6" id="auth-title">Iniciar Sesión</h2>
+       
+       <!-- Form Login Estándar -->
+       <form id="login-form" onsubmit="handleLogin(event)">
+         <input type="email" id="login-email" required placeholder="Correo electrónico" class="w-full mb-4 rounded-xl px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+         <input type="password" id="login-pwd" required placeholder="Contraseña" class="w-full mb-6 rounded-xl px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+         <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg">Entrar al Sistema</button>
+         <p id="login-error" class="text-rose-500 text-sm font-bold mt-4 hidden text-center">Credenciales incorrectas.</p>
+       </form>
+
+       <!-- Form Cambio de Contraseña Obligatorio -->
+       <form id="pwd-change-form" class="hidden" onsubmit="handlePwdChange(event)">
+         <p class="text-sm text-slate-500 dark:text-slate-400 text-center mb-6">Por motivos de seguridad, debes establecer una nueva contraseña personal antes de continuar.</p>
+         <input type="password" id="new-pwd" required placeholder="Nueva contraseña" class="w-full mb-4 rounded-xl px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+         <input type="password" id="confirm-pwd" required placeholder="Confirmar contraseña" class="w-full mb-6 rounded-xl px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+         <button type="submit" class="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition shadow-lg">Guardar y Entrar</button>
+         <p id="pwd-error" class="text-rose-500 text-sm font-bold mt-4 hidden text-center">Las contraseñas no coinciden.</p>
+       </form>
+    </div>
+  </div>
+
+  <!-- APLICACIÓN PRINCIPAL (Oculta hasta loguearse) -->
+  <div id="app-wrapper" class="hidden relative z-10 flex h-screen overflow-hidden fade-in">
+    
+    <!-- Sidebar (Hamburger Menu) -->
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden transition-opacity opacity-0" onclick="toggleSidebar()"></div>
+    
+    <aside id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-2xl transform -translate-x-full transition-transform duration-300 z-50 flex flex-col border-r border-slate-200 dark:border-slate-800">
+      <div class="p-6 flex justify-between items-center border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50">
+            <i data-lucide="car" class="h-6 w-6 text-white"></i>
+          </div>
+          <h1 class="text-xl font-bold tracking-tight">Martinelli</h1>
+        </div>
+        <button onclick="toggleSidebar()" class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <nav id="nav-menu" class="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
+        <!-- Rendered via JS -->
+      </nav>
+      <div class="p-6 border-t border-slate-100 dark:border-slate-800">
+        <div class="flex items-center justify-between w-full">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center font-bold text-slate-600 dark:text-slate-300" id="user-avatar"></div>
+            <div>
+              <p class="text-sm font-bold" id="user-name">Usuario</p>
+              <p class="text-xs text-slate-500" id="user-role">Rol</p>
+            </div>
+          </div>
+          <button onclick="logout()" title="Cerrar Sesión" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-full transition"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Wrapper -->
+    <div class="flex-1 flex flex-col h-screen overflow-y-auto no-scrollbar">
+      <!-- Header -->
+      <header class="sticky top-0 z-30 w-full backdrop-blur-2xl bg-slate-50/80 dark:bg-slate-950/80 border-b border-white/50 dark:border-slate-800 transition-colors">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex justify-between items-center h-20">
+            <div class="flex items-center space-x-4">
+              <button onclick="toggleSidebar()" class="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm">
+                <i data-lucide="menu" class="w-5 h-5"></i>
+              </button>
+              <h2 id="header-title" class="text-xl font-bold hidden sm:block">Panel de Control</h2>
+            </div>
+
+            <div class="flex items-center space-x-3">
+              <button onclick="toggleDarkMode()" class="p-2.5 text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-colors shadow-sm border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
+                <i data-lucide="moon" id="theme-icon" class="w-5 h-5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1" id="main-content">
+        
+        <!-- VIEW: CAJA -->
+        <div id="view-caja" class="view-section slide-up hidden space-y-8">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div>
+              <h2 class="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">Planilla de Caja</h2>
+              <p class="text-slate-500 dark:text-slate-400 mt-2 text-lg">Ingresos y egresos operativos.</p>
+            </div>
+            <button onclick="openModal('modal-caja')" class="group relative inline-flex items-center justify-center px-6 py-3 font-semibold text-white transition-all duration-300 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-indigo-500/30 rounded-2xl hover:scale-105 shadow-lg overflow-hidden">
+              <div class="absolute inset-0 w-full h-full bg-white/20 group-hover:translate-x-full transition-transform duration-500 ease-out -skew-x-12 -translate-x-full"></div>
+              <i data-lucide="plus" class="w-5 h-5 mr-2 relative z-10"></i><span class="relative z-10">Registrar Movimiento</span>
+            </button>
+          </div>
+
+          <div id="caja-filters-container" class="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-800 p-4 rounded-2xl shadow-sm hidden flex-wrap gap-4 items-end">
+            <!-- Inyectado por JS -->
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="caja-stats"></div>
+          
+          <div class="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-800 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="text-xs uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-100/50 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30">
+                    <th class="px-6 py-4 font-medium">Concepto</th>
+                    <th class="px-6 py-4 font-medium">Usuario / Sucursal</th>
+                    <th class="px-6 py-4 font-medium text-right">Monto</th>
+                    <th class="px-6 py-4 font-medium text-right">Saldo Parcial</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100/50 dark:divide-slate-800/50" id="caja-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW: FACTURAS -->
+        <div id="view-facturas" class="view-section slide-up hidden space-y-8">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div>
+              <h2 class="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">Control de Facturación</h2>
+              <p class="text-slate-500 dark:text-slate-400 mt-2 text-lg">Resumen global de comprobantes emitidos.</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="facturas-summary"></div>
+          <h3 class="text-xl font-bold mt-8 mb-4">Registro Histórico</h3>
+          <div class="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-800 rounded-[2rem] shadow-sm overflow-hidden">
+             <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="text-xs uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-100/50 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30">
+                    <th class="px-6 py-4 font-medium">Tipo y Nº</th>
+                    <th class="px-6 py-4 font-medium">Fecha</th>
+                    <th class="px-6 py-4 font-medium">Descripción</th>
+                    <th class="px-6 py-4 font-medium text-right">Total</th>
+                    <th class="px-6 py-4 font-medium text-center">Acción</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100/50 dark:divide-slate-800/50" id="facturas-table"></tbody>
+              </table>
+             </div>
+          </div>
+        </div>
+
+        <!-- VIEW: AUTOS (FLOTA) -->
+        <div id="view-autos" class="view-section slide-up hidden space-y-8">
+          <div id="match-notification-container"></div>
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div>
+              <h2 class="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">Flota y Stock</h2>
+              <p class="text-slate-500 dark:text-slate-400 mt-2 text-lg">Control de vehículos e inversiones.</p>
+            </div>
+            <button onclick="openModalCreateAuto()" class="group relative inline-flex items-center justify-center px-6 py-3 font-semibold text-white transition-all duration-300 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-indigo-500/30 rounded-2xl hover:scale-105 shadow-lg overflow-hidden">
+              <div class="absolute inset-0 w-full h-full bg-white/20 group-hover:translate-x-full transition-transform duration-500 ease-out -skew-x-12 -translate-x-full"></div>
+              <i data-lucide="plus" class="w-5 h-5 mr-2 relative z-10"></i><span class="relative z-10">Ingresar Vehículo</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="autos-grid"></div>
+        </div>
+
+        <!-- VIEW: CLIENTES (CRM) -->
+        <div id="view-clientes" class="view-section slide-up hidden space-y-8">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div>
+              <h2 class="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">CRM Clientes</h2>
+              <p class="text-slate-500 dark:text-slate-400 mt-2 text-lg">Base de datos de leads e interesados.</p>
+            </div>
+          </div>
+          <div class="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-800 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="text-xs uppercase tracking-widest text-slate-400 border-b border-slate-100/50 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30">
+                    <th class="px-6 py-4 font-medium">Lead</th>
+                    <th class="px-6 py-4 font-medium">Contacto</th>
+                    <th class="px-6 py-4 font-medium">Interés</th>
+                    <th class="px-6 py-4 font-medium">Follow-Up</th>
+                    <th class="px-6 py-4 font-medium">Acción</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100/50 dark:divide-slate-800/50" id="crm-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW: RESUMENES -->
+        <div id="view-resumenes" class="view-section slide-up hidden space-y-8">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div>
+              <h2 class="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">Dashboard Ejecutivo</h2>
+              <p class="text-slate-500 dark:text-slate-400 mt-2 text-lg">Análisis de rendimiento integral.</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="dashboard-content"></div>
+        </div>
+
+        <!-- VIEW: ADMINISTRACIÓN -->
+        <div id="view-admin" class="view-section slide-up hidden space-y-8">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div>
+              <h2 class="text-4xl font-bold text-slate-900 dark:text-white tracking-tight">Ajustes del Sistema</h2>
+              <p class="text-slate-500 dark:text-slate-400 mt-2 text-lg">Gestión de usuarios y sucursales.</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Gestion Usuarios -->
+            <div class="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
+               <h3 class="text-xl font-bold mb-4 flex items-center"><i data-lucide="users" class="w-5 h-5 mr-2 text-indigo-500"></i> Usuarios del Sistema</h3>
+               <form onsubmit="handleSaveUser(event)" class="mb-6 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 space-y-3">
+                  <div class="grid grid-cols-2 gap-3">
+                    <input id="new-user-name" required placeholder="Nombre completo" class="w-full bg-white dark:bg-slate-900 rounded-xl px-3 py-2 text-sm outline-none border border-slate-200 dark:border-slate-700" />
+                    <input type="email" id="new-user-email" required placeholder="Correo Electrónico" class="w-full bg-white dark:bg-slate-900 rounded-xl px-3 py-2 text-sm outline-none border border-slate-200 dark:border-slate-700" />
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <select id="new-user-rol" required class="w-full bg-white dark:bg-slate-900 rounded-xl px-3 py-2 text-sm outline-none border border-slate-200 dark:border-slate-700">
+                      <option value="Vendedor">Vendedor</option>
+                      <option value="Encargado">Encargado</option>
+                      <option value="Admin">Administrador</option>
+                    </select>
+                    <select id="new-user-suc" required class="w-full bg-white dark:bg-slate-900 rounded-xl px-3 py-2 text-sm outline-none border border-slate-200 dark:border-slate-700">
+                      <!-- Llenado por JS -->
+                    </select>
+                  </div>
+                  <input type="password" id="new-user-pwd" required placeholder="Contraseña Temporal" class="w-full bg-white dark:bg-slate-900 rounded-xl px-3 py-2 text-sm outline-none border border-slate-200 dark:border-slate-700" />
+                  <p class="text-[10px] text-slate-500 mb-2">El usuario deberá cambiar la contraseña al iniciar sesión por primera vez.</p>
+                  <div class="flex space-x-2">
+                    <button type="button" id="new-user-cancel" onclick="resetUserForm()" class="hidden flex-1 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-bold">Cancelar</button>
+                    <button type="submit" id="new-user-submit" class="flex-1 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold">Crear Usuario</button>
+                  </div>
+               </form>
+               <div id="admin-users-list" class="space-y-2 max-h-64 overflow-y-auto pr-2"></div>
+            </div>
+
+            <!-- Gestion Sucursales -->
+            <div class="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm">
+               <h3 class="text-xl font-bold mb-4 flex items-center"><i data-lucide="map-pin" class="w-5 h-5 mr-2 text-indigo-500"></i> Sucursales</h3>
+               <form onsubmit="handleSaveSucursal(event)" class="mb-6 flex flex-col space-y-2">
+                  <div class="flex space-x-2">
+                    <input id="new-suc-name" required placeholder="Nombre de Sucursal" class="flex-1 bg-white dark:bg-slate-900 rounded-xl px-3 py-2 text-sm outline-none border border-slate-200 dark:border-slate-700" />
+                    <button type="submit" id="new-suc-submit" class="px-4 bg-indigo-600 text-white rounded-xl text-sm font-bold">Crear</button>
+                  </div>
+                  <button type="button" id="new-suc-cancel" onclick="resetSucForm()" class="hidden w-full py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold">Cancelar Edición</button>
+               </form>
+               <div id="admin-suc-list" class="space-y-2"></div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+    <!-- MODALES GLOBALES -->
+
+    <!-- Modal Caja -->
+    <div id="modal-caja" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 fade-in hidden">
+      <div class="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-md" onclick="closeModal('modal-caja')"></div>
+      <div class="relative bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-white dark:border-slate-700 rounded-[2.5rem] shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
+        <div class="px-8 py-6 border-b border-slate-100/50 dark:border-slate-800 flex justify-between items-center bg-white/50 dark:bg-slate-900/50 sticky top-0 z-10">
+          <h3 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Nuevo Movimiento</h3>
+          <button onclick="closeModal('modal-caja')" class="bg-slate-100/50 dark:bg-slate-800 hover:bg-slate-200/50 dark:hover:bg-slate-700 text-slate-500 p-2 rounded-full transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-6 sm:p-8 overflow-y-auto no-scrollbar">
+          <form id="form-caja">
+            <div class="grid grid-cols-2 gap-4 mb-5">
+              <div><label class="block text-xs font-bold text-slate-500 uppercase mb-2">Fecha</label><input type="date" id="caja-fecha" required class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200/60 dark:border-slate-700 rounded-2xl px-4 py-3 dark:text-white outline-none" /></div>
+              <div><label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tipo</label><select id="caja-tipo" class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200/60 dark:border-slate-700 rounded-2xl px-4 py-3 dark:text-white outline-none"><option value="ingreso">Ingreso (+)</option><option value="gasto">Gasto (-)</option></select></div>
+            </div>
+            
+            <div class="mb-5">
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Categoría</label>
+              <div class="flex space-x-2">
+                <select id="caja-cat" required class="flex-1 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200/60 dark:border-slate-700 rounded-2xl px-4 py-3 dark:text-white outline-none"></select>
+                <button type="button" onclick="agregarCategoria()" class="px-4 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400 rounded-2xl font-bold hover:bg-indigo-200 transition-colors" title="Nueva Categoría">+</button>
+              </div>
+            </div>
+            
+            <div class="mb-5"><label class="block text-xs font-bold text-slate-500 uppercase mb-2">Descripción General</label><input type="text" id="caja-desc" required class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200/60 dark:border-slate-700 rounded-2xl px-4 py-3 dark:text-white outline-none" placeholder="Ej: Venta repuesto, Seña auto..." /></div>
+            
+            <div class="mb-5">
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Vehículo Asociado (Opcional)</label>
+              <select id="caja-auto" class="w-full bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200/60 dark:border-slate-700 rounded-2xl px-4 py-3 dark:text-white outline-none"></select>
+              <p class="text-[10px] text-slate-400 mt-1 ml-1">Si es un gasto, se asignará a la inversión de la unidad.</p>
+            </div>
+
+            <!-- TIPO DE COMPROBANTE -->
+            <div class="p-5 bg-slate-50 dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 mb-6">
+              <h4 class="font-bold text-sm mb-4">Comprobante / Facturación</h4>
+              <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Tipo</label>
+                  <select id="caja-comprobante" onchange="handleComprobanteChange(this.value)" class="w-full bg-white dark:bg-slate-950 border border-slate-200/60 dark:border-slate-700 rounded-xl px-4 py-2.5 dark:text-white outline-none">
+                    <option value="X">Recibo / Ticket (X)</option>
+                    <option value="A">Factura A</option>
+                    <option value="B">Factura B</option>
+                    <option value="C">Factura C</option>
+                  </select>
+                </div>
+                <div><label class="block text-xs font-bold text-slate-500 uppercase mb-2">Nº Comprobante</label><input type="text" id="caja-comp-num" placeholder="0001-..." class="w-full bg-white dark:bg-slate-950 border border-slate-200/60 dark:border-slate-700 rounded-xl px-4 py-2.5 dark:text-white outline-none" /></div>
+              </div>
+              <div class="mb-4">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Monto Total ($)</label>
+                <input type="number" id="caja-monto" required class="w-full bg-white dark:bg-slate-950 border border-slate-200/60 dark:border-slate-700 rounded-xl px-4 py-3 text-lg font-bold text-slate-900 dark:text-white outline-none" />
+              </div>
+              <div id="caja-iva-container" class="hidden">
+                 <label class="block text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase mb-2">IVA Incluido en el Total ($)</label>
+                 <input type="number" id="caja-iva" placeholder="Monto IVA..." class="w-full bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-2.5 dark:text-white outline-none" />
+              </div>
+            </div>
+
+            <button type="submit" class="w-full py-4 bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 text-white font-bold rounded-2xl transition-colors shadow-lg">Confirmar y Guardar</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Detalle Factura A -->
+    <div id="modal-detalle-factura" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 fade-in hidden">
+      <div class="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-md" onclick="closeModal('modal-detalle-factura')"></div>
+      <div class="relative bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-white dark:border-slate-700 rounded-[2.5rem] shadow-2xl w-full max-w-sm flex flex-col overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100/50 dark:border-slate-800 flex justify-between items-center bg-white/50 dark:bg-slate-900/50">
+          <h3 class="text-xl font-bold tracking-tight">Detalle Factura A</h3>
+          <button onclick="closeModal('modal-detalle-factura')" class="bg-slate-100/50 dark:bg-slate-800 text-slate-500 p-1.5 rounded-full"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+        <div class="p-6" id="factura-detail-content"></div>
+      </div>
+    </div>
+
+    <!-- Modal Form Auto (Crear/Editar) -->
+    <div id="modal-auto" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 fade-in hidden">
+      <div class="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-md" onclick="closeModal('modal-auto')"></div>
+      <div class="relative bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-white dark:border-slate-700 rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden">
+        <div class="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+          <h3 class="text-2xl font-bold" id="modal-auto-title">Alta de Vehículo</h3>
+          <button onclick="closeModal('modal-auto')" class="bg-slate-100 dark:bg-slate-800 p-2 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <div class="p-6">
+          <form id="form-auto">
+            <div class="grid grid-cols-2 gap-4 mb-4"><input id="auto-marca" required placeholder="Marca" class="w-full rounded-xl px-4 py-3 border dark:bg-slate-900 dark:border-slate-700 outline-none" /><input id="auto-modelo" required placeholder="Modelo" class="w-full rounded-xl px-4 py-3 border dark:bg-slate-900 dark:border-slate-700 outline-none" /></div>
+            <div class="grid grid-cols-2 gap-4 mb-4"><input id="auto-anio" type="number" required placeholder="Año" class="w-full rounded-xl px-4 py-3 border dark:bg-slate-900 dark:border-slate-700 outline-none" /><input id="auto-patente" required placeholder="Patente" class="w-full rounded-xl px-4 py-3 border dark:bg-slate-900 dark:border-slate-700 uppercase outline-none" /></div>
+            <input id="auto-precio" type="number" required placeholder="Precio Venta Est. ($)" class="w-full rounded-xl px-4 py-3 mb-4 border dark:bg-slate-900 dark:border-slate-700 outline-none" />
+            <select id="auto-estado" class="w-full rounded-xl px-4 py-3 mb-4 border dark:bg-slate-900 dark:border-slate-700 outline-none"></select>
+            <button type="submit" id="modal-auto-submit" class="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white font-bold rounded-2xl shadow-lg">Añadir a Flota</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Detalle Auto 360 -->
+    <div id="modal-detalle-auto" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 fade-in hidden">
+      <div class="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-md" onclick="closeModal('modal-detalle-auto')"></div>
+      <div class="relative bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-white dark:border-slate-700 rounded-[2.5rem] shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh] overflow-hidden">
+        <div class="px-8 py-6 border-b border-slate-100/50 dark:border-slate-800 flex justify-between items-center bg-white/50 dark:bg-slate-900/50 sticky top-0 z-20">
+          <h3 id="da-title" class="text-2xl font-bold tracking-tight">Ficha 360º</h3>
+          <div class="flex items-center space-x-2" id="da-header-actions">
+            <!-- Botones inyectados por JS (Editar/Eliminar) -->
+            <button onclick="closeModal('modal-detalle-auto')" class="bg-slate-100/50 dark:bg-slate-800 p-2 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+        </div>
+        <div class="p-6 sm:p-8 overflow-y-auto no-scrollbar relative" id="da-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT -->
+  <script>
+    // --- ESTADO GLOBAL ---
+    const generateId = () => Date.now() + Math.floor(Math.random() * 1000);
+
+    const state = {
+      activeTab: 'caja',
+      isDarkMode: false,
+      currentTime: new Date(),
+      isSidebarOpen: false,
+      
+      // Auth State
+      currentUser: null, 
+      
+      sucursales: [{id: 1, nombre: 'Casa Central'}, {id: 2, nombre: 'Sucursal Norte'}],
+      usuarios: [
+        { id: 1, email: 'admin@martinelli.com', password: '12345martinelli', nombre: 'Admin Principal', rol: 'Admin', sucursalId: 1, isFirstLogin: false },
+        { id: 2, email: 'lucas@martinelli.com', password: 'temp', nombre: 'Lucas (Enc. Central)', rol: 'Encargado', sucursalId: 1, isFirstLogin: true },
+        { id: 3, email: 'marta@martinelli.com', password: 'temp', nombre: 'Marta (Vend. Central)', rol: 'Vendedor', sucursalId: 1, isFirstLogin: true }
+      ],
+      
+      estadosAuto: ['En salón', 'Taller', 'Vendido', 'Señado'],
+      categoriasGasto: ['Mecánica', 'Estética', 'Gestoría', 'Impuestos', 'Servicios Generales', 'Gastos Varios'],
+      
+      transacciones: [],
+      autos: [
+        { id: 1, marca: 'Volkswagen', modelo: 'Gol Trend', año: 2019, patente: 'AD123EF', precio: 8500000, estado: 'En salón', gastos: [{id: 1, fecha: '2026-04-05', descripcion:'Correa', categoria:'Mecánica', monto:85000}], documentacion: { c08: true, verificacion: true, libreDeuda: true, vtv: '2026-11-15' } }
+      ],
+      consultas: [],
+      
+      cajaFilterUser: 'all',
+      matchNotification: null,
+      selectedAutoId: null,
+      daActiveSection: 'crm',
+      isVentaMode: false,
+      ventaData: { montoEfectivo: '', tienePermuta: false },
+      
+      // Edit States
+      editingUserId: null,
+      editingSucursalId: null,
+      editingAutoId: null
+    };
+
+    // --- UTILS ---
+    const formatMoney = (a) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(a);
+    const formatDate = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+    const checkDocStatus = (docs) => docs && docs.c08 && docs.verificacion && docs.libreDeuda;
+    const formatWhatsAppLink = (phone, text) => `https://wa.me/549${phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+
+    function toggleDarkMode() {
+      state.isDarkMode = !state.isDarkMode;
+      if (state.isDarkMode) document.documentElement.classList.add('dark');
+      else document.documentElement.classList.remove('dark');
+      document.getElementById('theme-icon').setAttribute('data-lucide', state.isDarkMode ? 'sun' : 'moon');
+      lucide.createIcons();
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('sidebar-backdrop');
+      state.isSidebarOpen = !state.isSidebarOpen;
+      
+      if(state.isSidebarOpen) {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+        setTimeout(()=>backdrop.classList.remove('opacity-0'), 10);
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('opacity-0');
+        setTimeout(()=>backdrop.classList.add('hidden'), 300);
+      }
+    }
+
+    function switchTab(tabId) {
+      state.activeTab = tabId;
+      document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+      document.getElementById(`view-${tabId}`).classList.remove('hidden');
+      if(state.isSidebarOpen) toggleSidebar();
+      renderNav();
+    }
+
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { 
+        document.getElementById(id).classList.add('hidden'); 
+        if(id === 'modal-detalle-auto') { state.selectedAutoId = null; state.isVentaMode = false; }
+    }
+
+    // --- AUTHENTICATION ---
+    function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const pwd = document.getElementById('login-pwd').value;
+      const err = document.getElementById('login-error');
+
+      const user = state.usuarios.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === pwd);
+      
+      if(user) {
+        err.classList.add('hidden');
+        state.currentUser = user;
+        
+        if(user.isFirstLogin) {
+          document.getElementById('login-form').classList.add('hidden');
+          document.getElementById('pwd-change-form').classList.remove('hidden');
+          document.getElementById('auth-title').innerText = "Cambiar Contraseña";
+        } else {
+          launchApp();
+        }
+      } else {
+        err.classList.remove('hidden');
+      }
+    }
+
+    function handlePwdChange(e) {
+      e.preventDefault();
+      const pwd1 = document.getElementById('new-pwd').value;
+      const pwd2 = document.getElementById('confirm-pwd').value;
+      const err = document.getElementById('pwd-error');
+
+      if(pwd1 !== pwd2) {
+        err.classList.remove('hidden');
+      } else {
+        err.classList.add('hidden');
+        state.currentUser.password = pwd1;
+        state.currentUser.isFirstLogin = false;
+        
+        // Update user in DB
+        const userInDb = state.usuarios.find(u => u.id === state.currentUser.id);
+        if(userInDb) { userInDb.password = pwd1; userInDb.isFirstLogin = false; }
+
+        launchApp();
+      }
+    }
+
+    function launchApp() {
+      document.getElementById('auth-wrapper').classList.add('hidden');
+      document.getElementById('app-wrapper').classList.remove('hidden');
+      
+      document.getElementById('user-name').innerText = state.currentUser.nombre;
+      document.getElementById('user-role').innerText = state.currentUser.rol;
+      document.getElementById('user-avatar').innerText = state.currentUser.nombre.charAt(0).toUpperCase();
+      
+      state.cajaFilterUser = 'all';
+      initSelects();
+      renderAllViews();
+      switchTab('caja');
+    }
+
+    window.logout = () => {
+      state.currentUser = null;
+      document.getElementById('app-wrapper').classList.add('hidden');
+      document.getElementById('auth-wrapper').classList.remove('hidden');
+      
+      // Reset forms
+      document.getElementById('login-form').classList.remove('hidden');
+      document.getElementById('pwd-change-form').classList.add('hidden');
+      document.getElementById('auth-title').innerText = "Iniciar Sesión";
+      document.getElementById('login-email').value = '';
+      document.getElementById('login-pwd').value = '';
+      document.getElementById('new-pwd').value = '';
+      document.getElementById('confirm-pwd').value = '';
+      document.getElementById('login-error').classList.add('hidden');
+    };
+
+
+    // --- RENDERIZADORES ---
+    function renderNav() {
+      if(!state.currentUser) return;
+      const isAd = state.currentUser.rol === 'Admin';
+      
+      let tabs = [
+        { id: 'caja', icon: 'wallet', label: 'Caja' },
+        { id: 'autos', icon: 'car', label: 'Flota' },
+        { id: 'clientes', icon: 'users', label: 'CRM' }
+      ];
+      
+      if(isAd) {
+        tabs.splice(1, 0, { id: 'facturas', icon: 'file-text', label: 'Facturas (Global)' });
+        tabs.push({ id: 'resumenes', icon: 'pie-chart', label: 'Resúmenes' });
+        tabs.push({ id: 'admin', icon: 'settings', label: 'Administración' });
+      }
+
+      const html = tabs.map(t => `
+        <button onclick="switchTab('${t.id}')" class="w-full flex items-center space-x-3 py-3 px-4 rounded-2xl transition-all font-bold text-sm
+          ${state.activeTab === t.id ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}">
+          <i data-lucide="${t.icon}" class="w-5 h-5"></i><span>${t.label}</span>
+        </button>
+      `).join('');
+      
+      document.getElementById('nav-menu').innerHTML = html;
+      lucide.createIcons();
+    }
+
+    // CAJA
+    function renderCajaView() {
+      let myTrans = state.transacciones;
+      
+      if(state.currentUser.rol === 'Vendedor') {
+        myTrans = myTrans.filter(t => t.userId === state.currentUser.id);
+      } else if (state.currentUser.rol === 'Encargado') {
+        myTrans = myTrans.filter(t => t.sucursalId === state.currentUser.sucursalId);
+      }
+
+      if(state.currentUser.rol !== 'Vendedor') {
+        const fcContainer = document.getElementById('caja-filters-container');
+        fcContainer.classList.remove('hidden');
+        
+        let usersToFilter = state.usuarios;
+        if(state.currentUser.rol === 'Encargado') usersToFilter = state.usuarios.filter(u => u.sucursalId === state.currentUser.sucursalId);
+
+        fcContainer.innerHTML = `
+          <div class="flex-1 min-w-[200px]">
+             <label class="text-xs font-bold text-slate-500 block mb-1">Filtrar por Vendedor</label>
+             <select onchange="state.cajaFilterUser=this.value; renderCajaView()" class="w-full bg-white dark:bg-slate-800 rounded-xl px-3 py-2 text-sm border dark:border-slate-700 outline-none">
+               <option value="all">Todas las cajas permitidas</option>
+               ${usersToFilter.map(u => `<option value="${u.id}" ${state.cajaFilterUser==u.id?'selected':''}>${u.nombre}</option>`).join('')}
+             </select>
+          </div>
+        `;
+
+        if(state.cajaFilterUser !== 'all') {
+          myTrans = myTrans.filter(t => t.userId == state.cajaFilterUser);
+        }
+      } else {
+        document.getElementById('caja-filters-container').classList.add('hidden');
+      }
+
+      const sorted = [...myTrans].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+      let saldo = 0;
+      const transWithSaldo = sorted.map(t => {
+        saldo += t.tipo === 'ingreso' ? Number(t.valor) : -Number(t.valor);
+        return { ...t, saldo };
+      });
+      
+      const total = transWithSaldo.length ? transWithSaldo[transWithSaldo.length-1].saldo : 0;
+      const ingresos = transWithSaldo.filter(t => t.tipo==='ingreso').reduce((a,c)=>a+c.valor, 0);
+      const egresos = transWithSaldo.filter(t => t.tipo==='gasto').reduce((a,c)=>a+c.valor, 0);
+
+      document.getElementById('caja-stats').innerHTML = `
+        <div class="relative p-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/40 dark:border-slate-700/50 rounded-3xl shadow-sm overflow-hidden">
+          <h3 class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Saldo Disponible</h3>
+          <p class="text-3xl font-bold tracking-tight ${total >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${formatMoney(total)}</p>
+        </div>
+        <div class="relative p-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/40 dark:border-slate-700/50 rounded-3xl shadow-sm overflow-hidden">
+          <h3 class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Ingresos Registrados</h3>
+          <p class="text-3xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">${formatMoney(ingresos)}</p>
+        </div>
+        <div class="relative p-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl border border-white/40 dark:border-slate-700/50 rounded-3xl shadow-sm overflow-hidden">
+          <h3 class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Egresos Registrados</h3>
+          <p class="text-3xl font-bold tracking-tight text-rose-600 dark:text-rose-400">${formatMoney(egresos)}</p>
+        </div>
+      `;
+
+      document.getElementById('caja-table').innerHTML = transWithSaldo.slice().reverse().map(t => {
+        const u = state.usuarios.find(x => x.id === t.userId);
+        const s = state.sucursales.find(x => x.id === t.sucursalId);
+        
+        return `
+        <tr class="hover:bg-white/80 dark:hover:bg-slate-800/50 transition-colors">
+          <td class="px-6 py-4">
+            <div class="flex items-center space-x-4">
+              <div class="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${t.tipo === 'ingreso' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400'}">
+                <i data-lucide="${t.tipo==='ingreso'?'trending-up':'trending-down'}" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <p class="text-sm font-bold">${t.descripcion}</p>
+                <div class="flex items-center space-x-2 mt-1">
+                  <span class="text-xs text-slate-500 uppercase">${t.categoria}</span>
+                  ${t.tipoComprobante!=='X' ? `<span class="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400 text-[10px] font-bold px-1.5 py-0.5 rounded">Fac ${t.tipoComprobante}</span>`:''}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="px-6 py-4">
+            <p class="text-sm font-bold">${u ? u.nombre : 'Desc'}</p>
+            <p class="text-xs text-slate-500">${s ? s.nombre : ''}</p>
+          </td>
+          <td class="px-6 py-4 text-sm font-bold text-right ${t.tipo === 'ingreso' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">${t.tipo === 'ingreso' ? '+' : '-'}${formatMoney(t.valor)}</td>
+          <td class="px-6 py-4 text-sm font-bold text-slate-900 dark:text-slate-100 text-right">${formatMoney(t.saldo)}</td>
+        </tr>
+      `}).join('');
+    }
+
+    window.agregarCategoria = () => {
+      const nueva = prompt('Ingrese el nombre de la nueva categoría global:');
+      if(nueva && nueva.trim() !== '') {
+        state.categoriasGasto.push(nueva.trim());
+        initSelects();
+      }
+    };
+
+    window.handleComprobanteChange = (val) => {
+      const ivaCont = document.getElementById('caja-iva-container');
+      const ivaInput = document.getElementById('caja-iva');
+      if(val === 'A') {
+        ivaCont.classList.remove('hidden');
+        ivaInput.required = true;
+      } else {
+        ivaCont.classList.add('hidden');
+        ivaInput.required = false;
+        ivaInput.value = '';
+      }
+    };
+
+    // FACTURAS
+    function renderFacturasView() {
+      if(state.currentUser?.rol !== 'Admin') return;
+
+      const facturas = state.transacciones.filter(t => ['A','B','C'].includes(t.tipoComprobante));
+      const totalEmitido = facturas.reduce((a,c)=>a+c.valor, 0);
+      const totalIva = facturas.reduce((a,c)=>a+(c.iva||0), 0);
+
+      document.getElementById('facturas-summary').innerHTML = `
+        <div class="p-6 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-3xl text-white shadow-lg">
+          <p class="text-indigo-100 text-sm font-bold uppercase mb-1">Monto Total Facturado (Global)</p>
+          <p class="text-4xl font-black">${formatMoney(totalEmitido)}</p>
+        </div>
+        <div class="p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          <p class="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase mb-1">IVA Total Acumulado (Facturas A)</p>
+          <p class="text-4xl font-black text-emerald-600 dark:text-emerald-400">${formatMoney(totalIva)}</p>
+        </div>
+      `;
+
+      document.getElementById('facturas-table').innerHTML = facturas.length ? facturas.map(f => {
+        const u = state.usuarios.find(x => x.id === f.userId);
+        return `
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+          <td class="px-6 py-4">
+            <span class="inline-block bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold text-xs px-2 py-1 rounded mb-1">Tipo ${f.tipoComprobante}</span>
+            <p class="font-mono text-sm">${f.numComprobante || 'S/N'}</p>
+          </td>
+          <td class="px-6 py-4 text-sm text-slate-500">${formatDate(f.fecha)}</td>
+          <td class="px-6 py-4"><p class="font-bold text-sm">${f.descripcion}</p><p class="text-xs text-slate-400">Por: ${u?u.nombre:'-'}</p></td>
+          <td class="px-6 py-4 text-right font-black">${formatMoney(f.valor)}</td>
+          <td class="px-6 py-4 text-center">
+            ${f.tipoComprobante === 'A' ? `<button onclick="openDetalleFactura(${f.id})" class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100">Ver Detalle</button>` : `<span class="text-xs text-slate-400">-</span>`}
+          </td>
+        </tr>
+      `}).join('') : '<tr><td colspan="5" class="text-center py-8 text-slate-500">No hay facturas registradas.</td></tr>';
+    }
+
+    window.openDetalleFactura = (transId) => {
+      const t = state.transacciones.find(x => x.id === transId);
+      const subtotal = t.valor - (t.iva || 0);
+      document.getElementById('factura-detail-content').innerHTML = `
+        <div class="text-center mb-6">
+           <div class="w-12 h-12 bg-slate-900 text-white rounded-xl flex items-center justify-center text-2xl font-black mx-auto mb-2">A</div>
+           <p class="font-mono text-slate-500">${t.numComprobante}</p>
+        </div>
+        <div class="space-y-3 mb-6">
+          <div class="flex justify-between text-sm"><span class="text-slate-500">Fecha:</span> <span class="font-bold">${formatDate(t.fecha)}</span></div>
+          <div class="flex justify-between text-sm"><span class="text-slate-500">Operación:</span> <span class="font-bold text-right">${t.descripcion}</span></div>
+        </div>
+        <div class="border-t border-slate-200 dark:border-slate-700 pt-4 space-y-2">
+          <div class="flex justify-between text-sm"><span class="text-slate-500">Subtotal:</span> <span class="font-bold">${formatMoney(subtotal)}</span></div>
+          <div class="flex justify-between text-sm"><span class="text-slate-500">IVA Registrado:</span> <span class="font-bold text-emerald-600">${formatMoney(t.iva)}</span></div>
+          <div class="flex justify-between text-lg mt-2 pt-2 border-t border-slate-200 dark:border-slate-700"><span class="font-bold">Total:</span> <span class="font-black">${formatMoney(t.valor)}</span></div>
+        </div>
+      `;
+      openModal('modal-detalle-factura');
+    };
+
+    // AUTOS
+    function renderAutosView() {
+      document.getElementById('autos-grid').innerHTML = state.autos.map(auto => {
+        const totalGastos = auto.gastos.reduce((s, g) => s + Number(g.monto), 0);
+        const docsOk = checkDocStatus(auto.documentacion);
+        let bClass = 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
+        if(auto.estado==='En salón') bClass='bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800';
+        if(auto.estado==='Taller') bClass='bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800';
+        if(auto.estado==='Vendido') bClass='bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
+        
+        return `
+          <div onclick="openDetalleAuto(${auto.id})" class="group cursor-pointer bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-800 rounded-[2.5rem] p-2 shadow-sm hover:shadow-lg transition-all">
+            <div class="bg-slate-50/50 dark:bg-slate-800/50 rounded-[2rem] p-6 h-full flex flex-col relative overflow-hidden ${auto.estado === 'Vendido' ? 'opacity-70 grayscale-[30%]' : ''}">
+              <div class="absolute -right-10 -top-10 w-32 h-32 bg-indigo-50 dark:bg-indigo-900/20 rounded-full blur-3xl opacity-50 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/40 transition-colors"></div>
+              <div class="flex justify-between items-start mb-4 relative z-10">
+                <div class="flex items-center space-x-2">
+                  <span class="px-3 py-1 text-xs font-bold rounded-xl border ${bClass}">${auto.estado}</span>
+                  ${(!docsOk && auto.estado !== 'Vendido') ? `<span class="bg-rose-100 text-rose-600 p-1.5 rounded-full border border-rose-200 dark:bg-rose-900/30 dark:border-rose-800"><i data-lucide="alert-triangle" class="w-3 h-3"></i></span>` : ''}
+                </div>
+                <div class="bg-white dark:bg-slate-900 p-2 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800"><span class="font-mono text-sm font-bold">${auto.patente}</span></div>
+              </div>
+              <div class="mb-8 relative z-10">
+                <h3 class="text-2xl font-black leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400">${auto.marca} <br/><span class="font-medium text-slate-500">${auto.modelo}</span></h3>
+                <p class="text-sm font-medium text-slate-400 mt-2">${auto.año}</p>
+              </div>
+              <div class="mt-auto space-y-4 relative z-10">
+                <div class="flex justify-between items-center p-3 bg-white/80 dark:bg-slate-900/80 rounded-2xl border border-white dark:border-slate-800">
+                  <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Precio Venta</span>
+                  <span class="text-lg font-black">${formatMoney(auto.precio)}</span>
+                </div>
+                <div class="flex justify-between items-center px-2">
+                  <span class="text-xs font-medium text-slate-500 flex items-center"><i data-lucide="wrench" class="w-3 h-3 mr-1"></i> Inversión</span>
+                  <span class="text-sm font-bold text-rose-500">${formatMoney(totalGastos)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.openModalCreateAuto = () => {
+      state.editingAutoId = null;
+      document.getElementById('form-auto').reset();
+      document.getElementById('modal-auto-title').innerText = "Alta de Vehículo";
+      document.getElementById('modal-auto-submit').innerText = "Añadir a Flota";
+      openModal('modal-auto');
+    }
+
+    window.editAuto = (id) => {
+      const auto = state.autos.find(a => a.id === id);
+      state.editingAutoId = id;
+      document.getElementById('auto-marca').value = auto.marca;
+      document.getElementById('auto-modelo').value = auto.modelo;
+      document.getElementById('auto-anio').value = auto.año;
+      document.getElementById('auto-patente').value = auto.patente;
+      document.getElementById('auto-precio').value = auto.precio;
+      document.getElementById('auto-estado').value = auto.estado;
+      
+      document.getElementById('modal-auto-title').innerText = "Editar Vehículo";
+      document.getElementById('modal-auto-submit').innerText = "Guardar Cambios";
+      
+      closeModal('modal-detalle-auto');
+      openModal('modal-auto');
+    }
+
+    window.deleteAuto = (id) => {
+      if(confirm('¿Estás seguro de eliminar este vehículo? Esta acción borrará su historial y no se puede deshacer.')) {
+        state.autos = state.autos.filter(a => a.id !== id);
+        closeModal('modal-detalle-auto');
+        renderAutosView();
+      }
+    }
+
+    // CRM
+    function renderClientesView() {
+      document.getElementById('crm-table').innerHTML = state.consultas.slice().reverse().map(c => {
+        const auto = c.autoId ? state.autos.find(a => a.id === c.autoId) : null;
+        let lColor = 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800';
+        if(c.estadoLead==='Caliente') lColor = 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800';
+        if(c.estadoLead==='Tibio') lColor = 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800';
+
+        return `
+          <tr class="hover:bg-white/80 dark:hover:bg-slate-800/50 transition-colors">
+            <td class="px-6 py-4">
+              <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mr-3 font-bold">${c.nombre.charAt(0).toUpperCase()}</div>
+                <div>
+                  <p class="font-bold">${c.nombre}</p>
+                  <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded-md text-[10px] font-bold border uppercase tracking-wider ${lColor}"><i data-lucide="thermometer" class="w-3 h-3 mr-1"></i> ${c.estadoLead}</span>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4 text-sm font-medium text-slate-500 dark:text-slate-400">${c.telefono}</td>
+            <td class="px-6 py-4">
+              ${auto ? `
+                <div class="flex flex-col"><span class="text-sm font-bold text-slate-800 dark:text-slate-200">${auto.marca} ${auto.modelo}</span><span class="text-xs text-slate-500 italic max-w-[150px] truncate">"${c.notas}"</span></div>
+              ` : `
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300">${c.marcaInteres} (General)</span>
+              `}
+            </td>
+            <td class="px-6 py-4 text-sm font-medium text-slate-700 dark:text-slate-300"><div class="flex items-center"><i data-lucide="calendar-days" class="w-4 h-4 mr-2 text-indigo-500"></i>${formatDate(c.recordatorio)}</div></td>
+            <td class="px-6 py-4">
+              <a href="${formatWhatsAppLink(c.telefono, `Hola ${c.nombre}, soy de Martinelli Autos.`)}" target="_blank" class="inline-flex items-center px-3 py-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white text-xs font-bold rounded-xl shadow-lg"><i data-lucide="message-circle" class="w-4 h-4 mr-1.5"></i> WhatsApp</a>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // RESUMENES
+    function renderResumenesView() {
+      if(state.currentUser?.rol !== 'Admin') return;
+      const ingresos = state.transacciones.filter(t => t.tipo === 'ingreso').reduce((a, c) => a + c.valor, 0);
+      let egresos = state.transacciones.filter(t => t.tipo === 'gasto').reduce((a, c) => a + c.valor, 0);
+      
+      const cats = state.transacciones.filter(t => t.tipo === 'gasto').reduce((a, c) => { a[c.categoria] = (a[c.categoria]||0) + c.valor; return a; }, {});
+      
+      const max = Math.max(...Object.values(cats), 1);
+      const catHTML = Object.keys(cats).length === 0 ? '<p class="text-slate-500 text-center py-4">Sin datos.</p>' :
+        Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([cat, val]) => `
+          <div class="group">
+            <div class="flex justify-between text-sm mb-1.5"><span class="text-slate-600 dark:text-slate-300 font-medium">${cat}</span><span class="font-bold">${formatMoney(val)}</span></div>
+            <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
+              <div class="bg-indigo-500 h-2.5 rounded-full" style="width: ${(val/max)*100}%"></div>
+            </div>
+          </div>
+        `).join('');
+
+      document.getElementById('dashboard-content').innerHTML = `
+        <div class="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-800 p-8 rounded-[2rem] shadow-sm">
+          <h3 class="text-xl font-bold mb-6">Flujo de Fondos Operativos</h3>
+          <div class="space-y-6">
+            <div>
+              <div class="flex justify-between text-sm mb-2"><span class="text-slate-500">Ingresos Totales</span><span class="font-bold text-emerald-600">${formatMoney(ingresos)}</span></div>
+              <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3"><div class="bg-emerald-500 h-3 rounded-full" style="width: 100%"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-2"><span class="text-slate-500">Egresos Totales</span><span class="font-bold text-rose-600">${formatMoney(egresos)}</span></div>
+              <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3"><div class="bg-rose-500 h-3 rounded-full" style="width: ${Math.min((egresos/Math.max(ingresos,1))*100, 100)}%"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-800 p-8 rounded-[2rem] shadow-sm">
+          <h3 class="text-xl font-bold mb-6">Distribución de Egresos</h3>
+          <div class="space-y-4">${catHTML}</div>
+        </div>
+      `;
+    }
+
+    // ADMIN (SISTEMA)
+    function renderAdminView() {
+      if(state.currentUser?.rol !== 'Admin') return;
+      
+      // SUCURSALES
+      document.getElementById('admin-suc-list').innerHTML = state.sucursales.map(s => `
+        <div class="flex justify-between items-center p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
+           <span class="font-bold text-sm">${s.nombre}</span>
+           <div class="flex space-x-1">
+              <button onclick="editSucursal(${s.id})" class="p-1.5 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+              <button onclick="deleteSucursal(${s.id})" class="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+           </div>
+        </div>
+      `).join('');
+      document.getElementById('new-user-suc').innerHTML = state.sucursales.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('');
+
+      // USUARIOS
+      document.getElementById('admin-users-list').innerHTML = state.usuarios.map(u => {
+        const s = state.sucursales.find(x => x.id == u.sucursalId);
+        return `
+        <div class="flex justify-between items-center p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
+           <div>
+             <p class="font-bold text-sm">${u.nombre}</p>
+             <p class="text-xs text-slate-500">${u.rol} • ${s ? s.nombre : 'S/S'} • ${u.email}</p>
+           </div>
+           <div class="flex space-x-1">
+              <button onclick="editUser(${u.id})" class="p-1.5 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+              <button onclick="deleteUser(${u.id})" class="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+           </div>
+        </div>
+      `}).join('');
+      lucide.createIcons();
+    }
+
+    // Handlers CRUD Sucursal
+    window.handleSaveSucursal = (e) => {
+      e.preventDefault();
+      const n = document.getElementById('new-suc-name').value;
+      if(state.editingSucursalId) {
+        state.sucursales.find(s=>s.id === state.editingSucursalId).nombre = n;
+      } else {
+        state.sucursales.push({ id: generateId(), nombre: n });
+      }
+      resetSucForm();
+      renderAdminView();
+    };
+
+    window.editSucursal = (id) => {
+      state.editingSucursalId = id;
+      document.getElementById('new-suc-name').value = state.sucursales.find(s=>s.id===id).nombre;
+      document.getElementById('new-suc-submit').innerText = "Guardar";
+      document.getElementById('new-suc-cancel').classList.remove('hidden');
+    }
+    
+    window.deleteSucursal = (id) => {
+      if(confirm('¿Eliminar sucursal?')) {
+        state.sucursales = state.sucursales.filter(s=>s.id !== id);
+        renderAdminView();
+      }
+    }
+    
+    window.resetSucForm = () => {
+      state.editingSucursalId = null;
+      document.getElementById('new-suc-name').value = '';
+      document.getElementById('new-suc-submit').innerText = "Crear";
+      document.getElementById('new-suc-cancel').classList.add('hidden');
+    }
+
+    // Handlers CRUD Usuarios
+    window.handleSaveUser = (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('new-user-name').value;
+      const email = document.getElementById('new-user-email').value;
+      const rol = document.getElementById('new-user-rol').value;
+      const sucursalId = Number(document.getElementById('new-user-suc').value);
+      const password = document.getElementById('new-user-pwd').value;
+
+      if(state.editingUserId) {
+        const u = state.usuarios.find(x=>x.id === state.editingUserId);
+        u.nombre = nombre; u.email = email; u.rol = rol; u.sucursalId = sucursalId;
+        if(password) { u.password = password; u.isFirstLogin = true; } // Reset pass if typed
+      } else {
+        state.usuarios.push({
+          id: generateId(), nombre, email, password, rol, sucursalId, isFirstLogin: true
+        });
+      }
+      resetUserForm();
+      renderAdminView();
+    };
+
+    window.editUser = (id) => {
+      state.editingUserId = id;
+      const u = state.usuarios.find(x=>x.id===id);
+      document.getElementById('new-user-name').value = u.nombre;
+      document.getElementById('new-user-email').value = u.email;
+      document.getElementById('new-user-rol').value = u.rol;
+      document.getElementById('new-user-suc').value = u.sucursalId;
+      document.getElementById('new-user-pwd').value = '';
+      document.getElementById('new-user-pwd').required = false; // Optional on edit
+      document.getElementById('new-user-submit').innerText = "Guardar Cambios";
+      document.getElementById('new-user-cancel').classList.remove('hidden');
+    }
+
+    window.deleteUser = (id) => {
+      if(id === state.currentUser.id) return alert("No puedes eliminarte a ti mismo.");
+      if(confirm('¿Eliminar usuario?')) {
+        state.usuarios = state.usuarios.filter(x=>x.id !== id);
+        renderAdminView();
+      }
+    }
+
+    window.resetUserForm = () => {
+      state.editingUserId = null;
+      document.getElementById('new-user-name').value = '';
+      document.getElementById('new-user-email').value = '';
+      document.getElementById('new-user-pwd').value = '';
+      document.getElementById('new-user-pwd').required = true;
+      document.getElementById('new-user-submit').innerText = "Crear Usuario";
+      document.getElementById('new-user-cancel').classList.add('hidden');
+    }
+
+
+    // --- FICHA AUTO COMPLEX LOGIC ---
+    window.switchDASection = (sec) => { state.daActiveSection = sec; renderDetalleAuto(); };
+    window.toggleDoc = (autoId, key) => { state.autos.find(a => a.id === autoId).documentacion[key] = !state.autos.find(a => a.id === autoId).documentacion[key]; renderAutosView(); renderDetalleAuto(); };
+    window.updateVTV = (autoId, dateStr) => { state.autos.find(a => a.id === autoId).documentacion.vtv = dateStr; renderAutosView(); renderDetalleAuto(); };
+    
+    function calcCuota(precio) {
+      const ant = Number(document.getElementById('fin-ant')?.value) || 0;
+      const tna = Number(document.getElementById('fin-tna')?.value) || 0;
+      const cuotas = Number(document.getElementById('fin-cuotas')?.value) || 24;
+      const capital = precio - ant;
+      if (capital <= 0) return 0;
+      const tasaMensual = (tna / 100) / 12;
+      if (tasaMensual === 0) return capital / cuotas;
+      return capital * (tasaMensual * Math.pow(1 + tasaMensual, cuotas)) / (Math.pow(1 + tasaMensual, cuotas) - 1);
+    }
+    window.updateCuotaView = (precio) => { document.getElementById('fin-res').innerText = formatMoney(calcCuota(precio)); };
+
+    window.openDetalleAuto = (id) => {
+      state.selectedAutoId = id;
+      state.daActiveSection = 'crm';
+      state.isVentaMode = false;
+      renderDetalleAuto();
+      openModal('modal-detalle-auto');
+    }
+
+    function renderDetalleAuto() {
+      const auto = state.autos.find(a => a.id === state.selectedAutoId);
+      if(!auto) return;
+      const consultas = state.consultas.filter(c => c.autoId === auto.id);
+      const docs = auto.documentacion;
+      
+      document.getElementById('da-title').innerText = state.isVentaMode ? "Asistente de Venta" : "Ficha 360º";
+
+      // Inyectar Botones Editar/Borrar en el Header
+      document.getElementById('da-header-actions').innerHTML = `
+        <button onclick="editAuto(${auto.id})" class="p-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full transition" title="Editar"><i data-lucide="edit-2" class="w-4 h-4"></i></button>
+        <button onclick="deleteAuto(${auto.id})" class="p-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-full transition" title="Eliminar"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        <div class="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-2"></div>
+        <button onclick="closeModal('modal-detalle-auto')" class="bg-slate-100/50 dark:bg-slate-800 p-2 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
+      `;
+
+      let html = '';
+      if(!state.isVentaMode) {
+        html += `
+          <div class="bg-slate-900 text-white rounded-[2rem] p-6 sm:p-8 relative overflow-hidden mb-6 shadow-xl">
+            <div class="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500 rounded-full blur-3xl opacity-40"></div>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center relative z-10 gap-4">
+              <div>
+                <div class="flex items-center space-x-2 mb-2"><span class="bg-white/20 text-xs font-bold px-2 py-1 rounded-lg">${auto.estado}</span><span class="text-slate-300 text-sm font-medium">${auto.año}</span></div>
+                <h2 class="text-3xl font-black">${auto.marca} ${auto.modelo}</h2>
+              </div>
+              <div class="text-right">
+                 <p class="text-xs text-indigo-200 uppercase tracking-wider mb-1 font-bold">Precio de Venta</p>
+                 <p class="text-3xl font-black">${formatMoney(auto.precio)}</p>
+              </div>
+            </div>
+            ${auto.estado !== 'Vendido' ? `
+            <div class="mt-8 pt-6 border-t border-white/10 relative z-10">
+              <button onclick="state.isVentaMode=true; renderDetalleAuto();" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 text-white font-bold rounded-2xl shadow-lg flex items-center justify-center text-lg">
+                <i data-lucide="check-circle" class="w-6 h-6 mr-2"></i> Vender Unidad / Recibir Permuta
+              </button>
+            </div>` : ''}
+          </div>
+
+          <div class="flex space-x-2 sm:space-x-4 border-b border-slate-200 dark:border-slate-800 mb-6 overflow-x-auto no-scrollbar">
+            <button onclick="switchDASection('crm')" class="flex items-center pb-3 text-sm font-bold border-b-2 whitespace-nowrap px-2 ${state.daActiveSection==='crm'?'border-indigo-500 text-indigo-600':'border-transparent text-slate-400'}"><i data-lucide="users" class="w-4 h-4 mr-2"></i> CRM Leads</button>
+            <button onclick="switchDASection('doc')" class="flex items-center pb-3 text-sm font-bold border-b-2 whitespace-nowrap px-2 ${state.daActiveSection==='doc'?'border-indigo-500 text-indigo-600':'border-transparent text-slate-400'}"><i data-lucide="file-check" class="w-4 h-4 mr-2"></i> Legales</button>
+            <button onclick="switchDASection('fin')" class="flex items-center pb-3 text-sm font-bold border-b-2 whitespace-nowrap px-2 ${state.daActiveSection==='fin'?'border-indigo-500 text-indigo-600':'border-transparent text-slate-400'}"><i data-lucide="calculator" class="w-4 h-4 mr-2"></i> Simulador</button>
+            <button onclick="switchDASection('gas')" class="flex items-center pb-3 text-sm font-bold border-b-2 whitespace-nowrap px-2 ${state.daActiveSection==='gas'?'border-indigo-500 text-indigo-600':'border-transparent text-slate-400'}"><i data-lucide="wrench" class="w-4 h-4 mr-2"></i> Taller</button>
+          </div>
+        `;
+
+        if(state.daActiveSection === 'crm') {
+          html += `<div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+            <div class="md:col-span-3 space-y-4">
+              ${consultas.length ? consultas.map(c => `
+                <div class="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+                  <div class="flex justify-between items-start mb-2"><h4 class="font-bold">${c.nombre}</h4><span class="px-2 py-0.5 text-xs font-bold rounded-md bg-slate-100 text-slate-800">${c.estadoLead}</span></div>
+                  <p class="text-sm text-slate-600 dark:text-slate-300 italic mb-3">"${c.notas}"</p>
+                  <a href="${formatWhatsAppLink(c.telefono, 'Hola!')}" target="_blank" class="text-xs font-bold text-[#25D366] flex items-center"><i data-lucide="message-circle" class="w-3 h-3 mr-1"></i> Contactar</a>
+                </div>
+              `).join('') : '<p class="text-sm text-slate-500">Sin consultas.</p>'}
+            </div>
+            <div class="md:col-span-2">
+               <form onsubmit="handleDA_CRMSubmit(event, ${auto.id})" class="bg-indigo-50 dark:bg-indigo-900/10 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-800/30">
+                 <h4 class="font-bold text-indigo-900 dark:text-indigo-400 mb-4 text-sm">Nuevo Lead</h4>
+                 <input id="dac-nombre" required placeholder="Nombre" class="w-full mb-3 rounded-xl px-3 py-2 text-sm dark:bg-slate-900 outline-none" />
+                 <input id="dac-tel" required placeholder="Teléfono" class="w-full mb-3 rounded-xl px-3 py-2 text-sm dark:bg-slate-900 outline-none" />
+                 <textarea id="dac-nota" required placeholder="Notas..." class="w-full mb-3 rounded-xl px-3 py-2 text-sm dark:bg-slate-900 outline-none"></textarea>
+                 <button type="submit" class="w-full py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold">Guardar</button>
+               </form>
+            </div>
+          </div>`;
+        } else if (state.daActiveSection === 'doc') {
+          html += `<div class="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${[{k: 'c08', l: '08 Firmado'}, {k: 'verificacion', l: 'Verificación 12D'}, {k: 'libreDeuda', l: 'Libre Deuda'}].map(i => `
+              <div onclick="toggleDoc(${auto.id}, '${i.k}')" class="p-4 rounded-2xl border-2 cursor-pointer flex items-start space-x-4 ${docs[i.k]?'bg-emerald-50 border-emerald-500':'bg-white dark:bg-slate-900 border-slate-200'}">
+                <div class="w-6 h-6 rounded-full flex items-center justify-center ${docs[i.k]?'bg-emerald-500 text-white':'bg-slate-200 dark:bg-slate-800'}">${docs[i.k]?'<i data-lucide="check" class="w-4 h-4"></i>':''}</div>
+                <p class="font-bold">${i.l}</p>
+              </div>
+            `).join('')}
+            <div class="p-4 rounded-2xl border-2 bg-white dark:bg-slate-900">
+              <label class="text-xs font-bold uppercase mb-1 block">Vencimiento VTV</label>
+              <input type="date" value="${docs.vtv}" onchange="updateVTV(${auto.id}, this.value)" class="w-full rounded-xl px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 outline-none" />
+            </div>
+          </div>`;
+        } else if (state.daActiveSection === 'fin') {
+          html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <label class="block text-xs font-bold uppercase mb-2">Anticipo ($)</label>
+              <input id="fin-ant" type="number" oninput="updateCuotaView(${auto.precio})" placeholder="${auto.precio*0.5}" class="w-full rounded-2xl px-4 py-3 mb-4 bg-slate-50 dark:bg-slate-900 border outline-none" />
+              <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-xs font-bold uppercase mb-2">TNA (%)</label><input id="fin-tna" type="number" value="65" oninput="updateCuotaView(${auto.precio})" class="w-full rounded-2xl px-4 py-3 bg-slate-50 dark:bg-slate-900 border outline-none" /></div>
+                <div><label class="block text-xs font-bold uppercase mb-2">Meses</label><select id="fin-cuotas" onchange="updateCuotaView(${auto.precio})" class="w-full rounded-2xl px-4 py-3 bg-slate-50 dark:bg-slate-900 border outline-none"><option value="12">12</option><option value="24" selected>24</option><option value="36">36</option></select></div>
+              </div>
+            </div>
+            <div class="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-3xl p-8 text-white"><p class="text-indigo-200 font-bold uppercase text-sm mb-2">Cuota Mensual Est.</p><p id="fin-res" class="text-5xl font-black">${formatMoney(calcCuota(auto.precio))}</p></div>
+          </div>`;
+        } else if (state.daActiveSection === 'gas') {
+          const tGas = auto.gastos.reduce((a,g)=>a+g.monto,0);
+          html += `<div>
+             <div class="flex justify-between items-center mb-6"><h4 class="font-bold text-lg">Inversiones/Taller</h4><span class="bg-rose-50 text-rose-600 px-3 py-1 rounded-xl text-sm font-bold border border-rose-200 dark:bg-rose-900/30 dark:border-rose-800">Total: ${formatMoney(tGas)}</span></div>
+             <div class="space-y-3">${auto.gastos.length ? auto.gastos.map(g => `<div class="flex justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700"><div><p class="font-bold">${g.descripcion}</p><p class="text-xs text-slate-500">${g.categoria} • ${formatDate(g.fecha)}</p></div><span class="font-bold text-rose-600">${formatMoney(g.monto)}</span></div>`).join('') : '<p class="text-slate-500 py-6 text-center">Sin gastos.</p>'}</div>
+          </div>`;
+        }
+      } else {
+        html += `
+          <button onclick="state.isVentaMode=false; renderDetalleAuto();" class="text-sm font-bold text-indigo-600 hover:underline mb-6 flex items-center"><i data-lucide="x" class="w-4 h-4 mr-1"></i> Cancelar Venta</button>
+          <form onsubmit="handleDAVentaSubmit(event, ${auto.id})">
+            <div class="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-[2rem] border mb-6">
+              <label class="block text-xs font-bold uppercase mb-2">Efectivo / Transferencia ($)</label>
+              <input id="vent-efectivo" type="number" required class="w-full rounded-2xl px-4 py-4 text-lg font-bold text-emerald-600 outline-none" />
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-[2rem] border mb-6">
+              <div class="flex justify-between items-center mb-6">
+                <h4 class="font-bold flex items-center"><i data-lucide="repeat" class="w-5 h-5 mr-2 text-indigo-500"></i> Permuta / Usado</h4>
+                <label class="flex items-center cursor-pointer">
+                  <input type="checkbox" id="vent-hasperm" class="sr-only toggle-checkbox" onchange="state.ventaData.tienePermuta=this.checked; renderDetalleAuto();" ${state.ventaData.tienePermuta?'checked':''} />
+                  <div class="toggle-label bg-slate-300 relative"><div class="absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${state.ventaData.tienePermuta?'translate-x-6':''}"></div></div>
+                </label>
+              </div>
+              ${state.ventaData.tienePermuta ? `
+                <div class="grid grid-cols-2 gap-4">
+                  <input id="p-marca" required placeholder="Marca" class="w-full rounded-xl px-3 py-2 outline-none" /><input id="p-modelo" required placeholder="Modelo" class="w-full rounded-xl px-3 py-2 outline-none" />
+                  <input id="p-anio" type="number" required placeholder="Año" class="w-full rounded-xl px-3 py-2 outline-none" /><input id="p-pat" required placeholder="Patente" class="w-full rounded-xl px-3 py-2 uppercase outline-none" />
+                  <input id="p-valor" type="number" required placeholder="Valor Tomado ($)" class="col-span-2 w-full rounded-xl px-3 py-2 outline-none" />
+                </div>
+              ` : ''}
+            </div>
+            <button type="submit" class="w-full py-5 bg-slate-900 dark:bg-indigo-600 text-white font-black text-lg rounded-2xl shadow-xl">Confirmar Operación</button>
+          </form>
+        `;
+      }
+
+      document.getElementById('da-content').innerHTML = html;
+      lucide.createIcons();
+    }
+
+    window.handleDA_CRMSubmit = (e, autoId) => {
+      e.preventDefault();
+      const auto = state.autos.find(a=>a.id===autoId);
+      state.consultas.push({ id: generateId(), autoId, marcaInteres: auto.marca, nombre: document.getElementById('dac-nombre').value, telefono: document.getElementById('dac-tel').value, notas: document.getElementById('dac-nota').value, estadoLead: 'Tibio', recordatorio: new Date().toISOString().split('T')[0], fecha: new Date().toISOString().split('T')[0] });
+      renderDetalleAuto();
+      renderClientesView();
+    };
+
+    window.handleDAVentaSubmit = (e, autoId) => {
+      e.preventDefault();
+      const auto = state.autos.find(a => a.id === autoId);
+      auto.estado = 'Vendido';
+      
+      const efvo = Number(document.getElementById('vent-efectivo').value);
+      if(efvo > 0) {
+        state.transacciones.push({ id: generateId(), fecha: new Date().toISOString().split('T')[0], descripcion: `Venta: ${auto.marca} ${auto.modelo}`, tipo: 'ingreso', categoria: 'Otros', valor: efvo, userId: state.currentUser.id, sucursalId: state.currentUser.sucursalId, tipoComprobante: 'X', iva: 0 });
+      }
+
+      if(state.ventaData.tienePermuta) {
+        state.autos.push({ id: generateId(), marca: document.getElementById('p-marca').value, modelo: document.getElementById('p-modelo').value, año: Number(document.getElementById('p-anio').value), patente: document.getElementById('p-pat').value.toUpperCase(), precio: Number(document.getElementById('p-valor').value) * 1.2, estado: 'En salón', gastos: [], documentacion: { c08: false, verificacion: false, libreDeuda: false, vtv: '' } });
+      }
+
+      closeModal('modal-detalle-auto');
+      renderAllViews();
+      alert("¡Venta confirmada!");
+    };
+
+
+    // --- EVENTS DE CAJA Y AUTOS ---
+    document.getElementById('form-caja').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const t = {
+        id: generateId(), userId: state.currentUser.id, sucursalId: state.currentUser.sucursalId,
+        fecha: document.getElementById('caja-fecha').value, tipo: document.getElementById('caja-tipo').value,
+        descripcion: document.getElementById('caja-desc').value, categoria: document.getElementById('caja-cat').value,
+        valor: Number(document.getElementById('caja-monto').value), autoId: document.getElementById('caja-auto').value ? Number(document.getElementById('caja-auto').value) : null,
+        tipoComprobante: document.getElementById('caja-comprobante').value, numComprobante: document.getElementById('caja-comp-num').value, iva: Number(document.getElementById('caja-iva').value || 0)
+      };
+
+      state.transacciones.push(t);
+      if (t.autoId && t.tipo === 'gasto') {
+        const a = state.autos.find(x => x.id === t.autoId);
+        if (a) a.gastos.push({ id: generateId(), fecha: t.fecha, descripcion: t.descripcion, categoria: t.categoria, monto: t.valor });
+      }
+
+      closeModal('modal-caja');
+      e.target.reset();
+      initSelects();
+      renderAllViews();
+    });
+
+    document.getElementById('form-auto').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const marca = document.getElementById('auto-marca').value;
+      const modelo = document.getElementById('auto-modelo').value;
+      const año = Number(document.getElementById('auto-anio').value);
+      const patente = document.getElementById('auto-patente').value.toUpperCase();
+      const precio = Number(document.getElementById('auto-precio').value);
+      const estado = document.getElementById('auto-estado').value;
+
+      if(state.editingAutoId) {
+        const auto = state.autos.find(a => a.id === state.editingAutoId);
+        auto.marca = marca; auto.modelo = modelo; auto.año = año; auto.patente = patente; auto.precio = precio; auto.estado = estado;
+      } else {
+        state.autos.push({ id: generateId(), marca, modelo, año, patente, precio, estado, gastos: [], documentacion: { c08: false, verificacion: false, libreDeuda: false, vtv: '' } });
+        
+        const sims = state.consultas.filter(c => c.marcaInteres.toLowerCase() === marca.toLowerCase());
+        if(sims.length > 0) state.matchNotification = `Existen ${sims.length} cliente(s) buscando un ${marca}.`;
+      }
+      
+      closeModal('modal-auto');
+      e.target.reset();
+      initSelects();
+      renderAllViews();
+    });
+
+    // --- INIT ---
+    function initSelects() {
+      document.getElementById('caja-cat').innerHTML = state.categoriasGasto.map(c => `<option value="${c}">${c}</option>`).join('');
+      document.getElementById('auto-estado').innerHTML = state.estadosAuto.map(e => `<option value="${e}">${e}</option>`).join('');
+      document.getElementById('caja-auto').innerHTML = '<option value="">-- Ninguno (Gasto General) --</option>' + state.autos.map(a => `<option value="${a.id}">${a.marca} ${a.modelo} (${a.patente})</option>`).join('');
+      document.getElementById('caja-fecha').value = new Date().toISOString().split('T')[0];
+    }
+
+    function renderAllViews() {
+      if(!state.currentUser) return;
+      renderCajaView();
+      renderFacturasView();
+      renderAutosView();
+      renderClientesView();
+      renderResumenesView();
+      renderAdminView();
+      lucide.createIcons();
+    }
+
+    window.onload = () => {
+      // By default, system starts at Login screen.
+      // Setup icons for login screen:
+      lucide.createIcons();
+      initSelects();
+    };
+
+  </script>
+</body>
+</html>
