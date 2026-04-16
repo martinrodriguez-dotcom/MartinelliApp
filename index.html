@@ -4,7 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Martinelli Autos | ERP 2026</title>
+  <meta name="theme-color" content="#4f46e5">
   
+  <!-- Enlaces para PWA (App Instalable) -->
+  <link rel="icon" href="icon.png" type="image/png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="manifest" href="manifest.json">
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -49,10 +55,17 @@
   <!-- PANTALLA DE LOGIN -->
   <div id="auth-wrapper" class="relative z-50 flex items-center justify-center min-h-screen bg-slate-900/40 backdrop-blur-xl">
     <div class="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-2xl w-full max-w-md border border-white/20 dark:border-slate-800 fade-in">
-       <div class="flex justify-center mb-6">
-         <div class="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg"><i data-lucide="car" class="w-8 h-8 text-white"></i></div>
+       
+       <!-- APP LOGO -->
+       <div class="flex flex-col items-center justify-center mb-8">
+         <div class="w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-[1.5rem] flex items-center justify-center shadow-lg shadow-indigo-500/40 mb-3">
+            <i data-lucide="car" class="w-10 h-10 text-white"></i>
+         </div>
+         <h1 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Martinelli <span class="text-indigo-600 dark:text-indigo-400">Autos</span></h1>
+         <p class="text-sm font-bold text-slate-400 tracking-widest uppercase mt-1">ERP System</p>
        </div>
-       <h2 class="text-2xl font-black text-center mb-6" id="auth-title">Iniciar Sesión</h2>
+
+       <h2 class="text-xl font-bold text-center mb-6 text-slate-600 dark:text-slate-300" id="auth-title">Iniciar Sesión</h2>
        
        <!-- Form Login Estándar -->
        <form id="login-form" onsubmit="handleLogin(event)">
@@ -60,6 +73,11 @@
          <input type="password" id="login-pwd" required placeholder="Contraseña" class="w-full mb-6 rounded-xl px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
          <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition shadow-lg">Entrar al Sistema</button>
          <p id="login-error" class="text-rose-500 text-sm font-bold mt-4 hidden text-center">Credenciales incorrectas.</p>
+         
+         <!-- PWA Install Button (Hidden by default, shown if device supports installation) -->
+         <button id="login-install-btn" type="button" onclick="installPWA()" class="hidden w-full py-3 mt-4 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold rounded-xl hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition border border-emerald-200 dark:border-emerald-800 flex justify-center items-center">
+            <i data-lucide="download" class="w-4 h-4 mr-2"></i> Instalar Aplicación
+         </button>
        </form>
 
        <!-- Form Cambio de Contraseña Obligatorio -->
@@ -81,21 +99,29 @@
     
     <aside id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-2xl transform -translate-x-full transition-transform duration-300 z-50 flex flex-col border-r border-slate-200 dark:border-slate-800">
       <div class="p-6 flex justify-between items-center border-b border-slate-100 dark:border-slate-800">
+        <!-- APP LOGO (Minificado) -->
         <div class="flex items-center space-x-3">
-          <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-indigo-900/50">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
             <i data-lucide="car" class="h-6 w-6 text-white"></i>
           </div>
           <h1 class="text-xl font-bold tracking-tight">Martinelli</h1>
         </div>
         <button onclick="toggleSidebar()" class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
+      
       <nav id="nav-menu" class="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
         <!-- Rendered via JS -->
       </nav>
+
       <div class="p-6 border-t border-slate-100 dark:border-slate-800">
+        <!-- Botón Instalar en Sidebar -->
+        <button id="sidebar-install-btn" onclick="installPWA()" class="hidden w-full mb-4 flex items-center justify-center space-x-2 py-2 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-colors font-bold shadow-lg shadow-emerald-500/20">
+          <i data-lucide="download" class="w-4 h-4"></i><span>Instalar App</span>
+        </button>
+
         <div class="flex items-center justify-between w-full">
           <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center font-bold text-slate-600 dark:text-slate-300" id="user-avatar"></div>
+            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center font-bold text-slate-600 dark:text-slate-300 shadow-sm" id="user-avatar"></div>
             <div>
               <p class="text-sm font-bold" id="user-name">Usuario</p>
               <p class="text-xs text-slate-500" id="user-role">Rol</p>
@@ -416,8 +442,41 @@
     </div>
   </div>
 
-  <!-- JAVASCRIPT -->
+  <!-- JAVASCRIPT LOGIC -->
   <script>
+    // --- REGISTRO DEL SERVICE WORKER (PWA) ---
+    // Fix: Only register SW if the protocol is HTTP or HTTPS to prevent blob/file URL errors.
+    if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.protocol === 'http:')) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Service Worker registrado correctamente.', reg))
+          .catch(err => console.error('Error al registrar Service Worker:', err));
+      });
+    } else {
+        console.log('Registro del Service Worker omitido: protocolo no soportado (posiblemente ejecutándose en un entorno local o de previsualización blob).');
+    }
+
+    // --- INSTALACIÓN PWA ---
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('login-install-btn').classList.remove('hidden');
+      document.getElementById('sidebar-install-btn').classList.remove('hidden');
+    });
+
+    window.installPWA = async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          document.getElementById('login-install-btn').classList.add('hidden');
+          document.getElementById('sidebar-install-btn').classList.add('hidden');
+        }
+        deferredPrompt = null;
+      }
+    };
+
     // --- ESTADO GLOBAL ---
     const generateId = () => Date.now() + Math.floor(Math.random() * 1000);
 
@@ -465,7 +524,7 @@
     const checkDocStatus = (docs) => docs && docs.c08 && docs.verificacion && docs.libreDeuda;
     const formatWhatsAppLink = (phone, text) => `https://wa.me/549${phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
 
-    function toggleDarkMode() {
+    window.toggleDarkMode = () => {
       state.isDarkMode = !state.isDarkMode;
       if (state.isDarkMode) document.documentElement.classList.add('dark');
       else document.documentElement.classList.remove('dark');
@@ -473,7 +532,7 @@
       lucide.createIcons();
     }
 
-    function toggleSidebar() {
+    window.toggleSidebar = () => {
       const sidebar = document.getElementById('sidebar');
       const backdrop = document.getElementById('sidebar-backdrop');
       state.isSidebarOpen = !state.isSidebarOpen;
@@ -489,7 +548,7 @@
       }
     }
 
-    function switchTab(tabId) {
+    window.switchTab = (tabId) => {
       state.activeTab = tabId;
       document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
       document.getElementById(`view-${tabId}`).classList.remove('hidden');
@@ -497,14 +556,14 @@
       renderNav();
     }
 
-    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-    function closeModal(id) { 
+    window.openModal = (id) => { document.getElementById(id).classList.remove('hidden'); }
+    window.closeModal = (id) => { 
         document.getElementById(id).classList.add('hidden'); 
         if(id === 'modal-detalle-auto') { state.selectedAutoId = null; state.isVentaMode = false; }
     }
 
     // --- AUTHENTICATION ---
-    function handleLogin(e) {
+    window.handleLogin = (e) => {
       e.preventDefault();
       const email = document.getElementById('login-email').value;
       const pwd = document.getElementById('login-pwd').value;
@@ -528,7 +587,7 @@
       }
     }
 
-    function handlePwdChange(e) {
+    window.handlePwdChange = (e) => {
       e.preventDefault();
       const pwd1 = document.getElementById('new-pwd').value;
       const pwd2 = document.getElementById('confirm-pwd').value;
@@ -541,7 +600,6 @@
         state.currentUser.password = pwd1;
         state.currentUser.isFirstLogin = false;
         
-        // Update user in DB
         const userInDb = state.usuarios.find(u => u.id === state.currentUser.id);
         if(userInDb) { userInDb.password = pwd1; userInDb.isFirstLogin = false; }
 
@@ -568,7 +626,6 @@
       document.getElementById('app-wrapper').classList.add('hidden');
       document.getElementById('auth-wrapper').classList.remove('hidden');
       
-      // Reset forms
       document.getElementById('login-form').classList.remove('hidden');
       document.getElementById('pwd-change-form').classList.add('hidden');
       document.getElementById('auth-title').innerText = "Iniciar Sesión";
@@ -592,7 +649,7 @@
       ];
       
       if(isAd) {
-        tabs.splice(1, 0, { id: 'facturas', icon: 'file-text', label: 'Facturas (Global)' });
+        tabs.splice(1, 0, { id: 'facturas', icon: 'file-text', label: 'Facturas' });
         tabs.push({ id: 'resumenes', icon: 'pie-chart', label: 'Resúmenes' });
         tabs.push({ id: 'admin', icon: 'settings', label: 'Administración' });
       }
@@ -1304,7 +1361,6 @@
 
     window.onload = () => {
       // By default, system starts at Login screen.
-      // Setup icons for login screen:
       lucide.createIcons();
       initSelects();
     };
