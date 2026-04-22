@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Martinelli Autos | ERP 2026</title>
+  <title>Martinelli Autos | 2026</title>
   <meta name="theme-color" content="#0f172a">
   
   <link rel="icon" href="icon.png" type="image/png">
@@ -153,7 +153,7 @@
          
          <p id="login-error" class="text-rose-500 text-sm font-bold mt-4 hidden text-center">Credenciales incorrectas.</p>
          
-         <!-- Botón de instalación PWA (oculto por defecto) -->
+         <!-- Botón de instalación PWA -->
          <button 
            id="login-install-btn" 
            type="button" 
@@ -380,16 +380,29 @@
 
         <!-- VISTA: FLOTA DE AUTOS -->
         <div id="view-autos" class="view-section slide-up hidden space-y-8">
-          <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+          <div id="match-notification-container"></div>
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-6">
             <div>
               <h2 class="text-4xl font-bold tracking-tight">Flota y Stock</h2>
               <p class="text-slate-500 mt-2 text-lg">Control de vehículos e inversiones.</p>
             </div>
-            <button onclick="openModalCreateAuto()" class="flex items-center justify-center px-6 py-3 font-bold text-white dark:text-slate-900 bg-slate-900 dark:bg-white rounded-2xl hover:scale-105 shadow-xl transition-all duration-300">
-              <i data-lucide="plus" class="w-5 h-5 mr-2"></i>Ingresar Vehículo
-            </button>
+            <div class="flex flex-wrap items-center gap-3">
+              <!-- Botones Toggle de Vista Grid/Lista -->
+              <div class="flex bg-slate-200/50 dark:bg-slate-800/50 p-1 rounded-xl">
+                <button onclick="toggleViewModeAutos('grid')" id="btn-view-grid" class="p-2 rounded-lg transition-colors">
+                  <i data-lucide="layout-grid" class="w-5 h-5"></i>
+                </button>
+                <button onclick="toggleViewModeAutos('list')" id="btn-view-list" class="p-2 rounded-lg transition-colors">
+                  <i data-lucide="list" class="w-5 h-5"></i>
+                </button>
+              </div>
+              <button onclick="openModalCreateAuto()" class="flex items-center justify-center px-6 py-3 font-bold text-white dark:text-slate-900 bg-slate-900 dark:bg-white rounded-2xl hover:scale-105 shadow-xl transition-all duration-300">
+                <i data-lucide="plus" class="w-5 h-5 mr-2"></i>Ingresar Vehículo
+              </button>
+            </div>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="autos-grid"></div>
+          <!-- Contenedor dinámico de Autos (Grilla o Lista) -->
+          <div id="autos-content-area"></div>
         </div>
 
         <!-- VISTA: CRM -->
@@ -400,7 +413,7 @@
               <p class="text-slate-500 mt-2 text-lg">Base de datos de leads e interesados.</p>
             </div>
           </div>
-          <div class="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-[2rem] shadow-sm overflow-hidden">
+          <div class="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
             <div class="overflow-x-auto">
               <table class="w-full text-left border-collapse">
                 <thead>
@@ -700,10 +713,11 @@
 
   <!-- JAVASCRIPT LOGIC (FIREBASE & UI) -->
   <script type="module">
+    // Import the functions you need from the SDKs you need
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, getDocs, query } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-    // Reemplaza con tus credenciales reales si es necesario
+    // Your web app's Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyCFKoFPx7UJKJenjGEUpoFvcdGRqZSB6Ac",
       authDomain: "concecionaria-martinelli.firebaseapp.com",
@@ -713,6 +727,7 @@
       appId: "1:841279008964:web:379d26cf1100daebd29991"
     };
 
+    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     window.db = db;
@@ -847,7 +862,8 @@
       ventaData: { montoEfectivo: '', tienePermuta: false },
       editingUserId: null,
       editingSucursalId: null,
-      editingAutoId: null
+      editingAutoId: null,
+      viewModeAutos: localStorage.getItem('viewModeAutos') || 'grid'
     };
 
     // --- MANEJO DE PWA ---
@@ -1319,7 +1335,6 @@
       initSelects();
     });
 
-
     // --- RENDERIZADO DE VENTAS ---
     window.renderVentasView = () => {
       if(state.currentUser?.rol !== 'Admin') return;
@@ -1438,13 +1453,37 @@
 
 
     // --- RENDERIZADO DE AUTOS Y MODAL DE AUTOS ---
+    window.toggleViewModeAutos = (mode) => {
+      state.viewModeAutos = mode;
+      localStorage.setItem('viewModeAutos', mode);
+      renderAutosView();
+    }
+
     window.renderAutosView = () => {
-      const grid = document.getElementById('autos-grid');
-      
+      const container = document.getElementById('autos-content-area');
+
+      // Highlight active toggle button
+      document.getElementById('btn-view-grid').className = `p-2 rounded-lg transition-colors ${state.viewModeAutos === 'grid' ? 'bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`;
+      document.getElementById('btn-view-list').className = `p-2 rounded-lg transition-colors ${state.viewModeAutos === 'list' ? 'bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`;
+
       if (state.autos.length === 0) {
-        grid.innerHTML = '<div class="col-span-full py-12 text-center text-slate-500">No hay vehículos en la flota.</div>';
-      } else {
-        grid.innerHTML = state.autos.map(auto => {
+        container.innerHTML = '<div class="w-full py-12 text-center text-slate-500">No hay vehículos en la flota.</div>';
+        lucide.createIcons();
+        return;
+      }
+
+      // Sort alphabetically by Marca + Modelo
+      const sortedAutos = [...state.autos].sort((a, b) => {
+        const nameA = `${a.marca} ${a.modelo}`.toLowerCase();
+        const nameB = `${b.marca} ${b.modelo}`.toLowerCase();
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        return 0;
+      });
+
+      if (state.viewModeAutos === 'grid') {
+        // Generate Grid
+        const gridHtml = sortedAutos.map(auto => {
           const totalGastos = auto.gastos?.reduce((s, g) => s + Number(g.monto), 0) || 0;
           const docsOk = checkDocStatus(auto.documentacion);
           const sName = state.sucursales.find(x => x.id === auto.sucursalId)?.nombre || 'Sin Asignar';
@@ -1501,6 +1540,73 @@
             </div>
           `;
         }).join('');
+        container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 fade-in">${gridHtml}</div>`;
+      } else {
+        // Generate List
+        const listHtml = sortedAutos.map(auto => {
+          const totalGastos = auto.gastos?.reduce((s, g) => s + Number(g.monto), 0) || 0;
+          const docsOk = checkDocStatus(auto.documentacion);
+          const sName = state.sucursales.find(x => x.id === auto.sucursalId)?.nombre || 'Sin Asignar';
+
+          let bClass = 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300';
+          if(auto.estado === 'Disponible') bClass = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400';
+          if(auto.estado === 'Vendido') bClass = 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-500';
+          if(auto.estado === 'Aprobación Pendiente') bClass = 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 animate-pulse';
+
+          return `
+            <tr onclick="openDetalleAuto('${auto.id}')" class="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors ${auto.estado === 'Vendido' ? 'opacity-60' : ''}">
+              <td class="px-6 py-4">
+                <div class="flex items-center space-x-3">
+                   <div>
+                     <p class="font-bold text-sm text-slate-900 dark:text-white">${auto.marca} ${auto.modelo}</p>
+                     <p class="text-xs text-slate-500">Año ${auto.año}</p>
+                   </div>
+                   ${(!docsOk && auto.estado !== 'Vendido') ? `
+                    <span class="text-rose-500" title="Papeles Incompletos">
+                      <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                    </span>
+                  ` : ''}
+                </div>
+              </td>
+              <td class="px-6 py-4">
+                <span class="font-mono text-sm font-bold bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg">${auto.patente}</span>
+              </td>
+              <td class="px-6 py-4">
+                <span class="px-3 py-1 text-[10px] font-bold uppercase rounded-xl ${bClass}">
+                  ${auto.estado}
+                </span>
+              </td>
+              <td class="px-6 py-4 text-sm text-slate-500">
+                <i data-lucide="map-pin" class="w-3 h-3 inline mr-1"></i>${sName}
+              </td>
+              <td class="px-6 py-4 text-right">
+                <p class="text-sm font-black text-slate-900 dark:text-white">${formatMoney(auto.precio)}</p>
+                <p class="text-[10px] text-slate-500 uppercase tracking-wider mt-1">Inv: ${formatMoney(totalGastos)}</p>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        container.innerHTML = `
+          <div class="bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-[2rem] shadow-sm overflow-hidden fade-in">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="text-xs uppercase tracking-widest text-slate-500 border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-800/30">
+                    <th class="px-6 py-4 font-medium">Vehículo</th>
+                    <th class="px-6 py-4 font-medium">Patente</th>
+                    <th class="px-6 py-4 font-medium">Estado</th>
+                    <th class="px-6 py-4 font-medium">Ubicación</th>
+                    <th class="px-6 py-4 font-medium text-right">Precio / Inv.</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800/50">
+                   ${listHtml}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
       }
       lucide.createIcons();
     }
@@ -1635,7 +1741,7 @@
       const a = state.autos.find(x => x.id === state.selectedAutoId); 
       if(!a) return;
       
-      const tg = a.gastos?.reduce((ac, g) => ac + g.monto, 0) || 0;
+      const tg = a.gastos?.reduce((ac, g) => ac + Number(g.monto), 0) || 0;
       
       // Header Actions
       document.getElementById('da-header-actions').innerHTML = `
@@ -1795,7 +1901,7 @@
               </div>
               <div class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-3xl p-8 shadow-lg flex flex-col justify-center">
                 <p class="text-sm font-bold uppercase opacity-70 mb-2">Cuota Est. (Sis. Francés)</p>
-                <p id="fin-res" class="text-5xl font-black">${formatMoney(calcCuota(a.precio))}</p>
+                <p id="fin-res" class="text-5xl font-black">${formatMoney(a.precio)}</p>
               </div>
             </div>
           `;
@@ -1915,7 +2021,6 @@
       lucide.createIcons();
     }
 
-    // Funciones Submit Auto
     window.handleDA_CRMSubmit = async (e, autoId) => { 
       e.preventDefault(); 
       const a = state.autos.find(x => x.id === autoId);
@@ -1931,7 +2036,6 @@
         fecha: new Date().toISOString().split('T')[0] 
       }); 
       
-      // Limpiar es opcional porque onSnapshot va a refrescar la vista
       document.getElementById('dac-nombre').value = '';
       document.getElementById('dac-tel').value = '';
       document.getElementById('dac-nota').value = '';
@@ -1949,7 +2053,6 @@
       
       const adminUsr = state.usuarios.find(u => u.rol === 'Admin');
 
-      // 1. Ingreso a Caja Central (Admin)
       if(efectivo > 0) {
         await window.fbAdd("transacciones", { 
           fecha: new Date().toISOString().split('T')[0], 
@@ -1966,7 +2069,6 @@
         });
       }
 
-      // 2. Registro de Venta Histórica
       const valP = state.ventaData.tienePermuta ? Number(document.getElementById('p-valor').value) : 0;
       
       await window.fbAdd("ventas", {
@@ -1982,14 +2084,13 @@
         detallePermuta: state.ventaData.tienePermuta ? `${document.getElementById('p-marca').value} ${document.getElementById('p-modelo').value}` : null
       });
 
-      // 3. Auto en Permuta a Flota
       if(state.ventaData.tienePermuta) {
         await window.fbAdd("autos", { 
           marca: document.getElementById('p-marca').value, 
           modelo: document.getElementById('p-modelo').value, 
           año: Number(document.getElementById('p-anio').value), 
           patente: document.getElementById('p-pat').value.toUpperCase(), 
-          precio: valP * 1.2, // Sugiere un 20% más por defecto
+          precio: valP * 1.2,
           estado: 'Disponible', 
           sucursalId: auto.sucursalId, 
           gastos: [], 
@@ -1997,13 +2098,11 @@
         });
       }
       
-      // 4. Cambiar estado auto actual
       await window.fbUpdate("autos", autoId, { estado: 'Vendido' });
       
       closeModal('modal-detalle-auto'); 
       alert("Operación completada exitosamente.");
     };
-
 
     // --- RENDERIZADO DE FACTURAS ---
     window.renderFacturasView = () => {
@@ -2304,7 +2403,7 @@
       state.autos.forEach(a => {
         a.gastos?.forEach(g => {
           cats[g.categoria] = (cats[g.categoria] || 0) + g.monto; 
-          egr += g.monto;
+          egr += Number(g.monto);
         });
       });
       
