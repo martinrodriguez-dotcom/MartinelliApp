@@ -8,7 +8,7 @@ Nueva version modular de Martinelli Autos basada en la estructura funcional de R
 
 El nuevo codigo utiliza exclusivamente `martinelliapp-40269`. No se copian automaticamente registros desde `rivasauto` ni desde `concecionaria-martinelli`. No reutilizar usuarios o credenciales de Rivas.
 
-**Antes de publicar:** crear la base Firestore del proyecto nuevo y definir reglas de seguridad. La autenticacion heredada de Rivas coteja `email` y `password` de la coleccion `usuarios` en el navegador; **no es una autenticacion segura para produccion**. Debe migrarse a Firebase Authentication y reglas de seguridad con roles antes de usar datos reales.
+**Antes de publicar:** crear la base Firestore del proyecto nuevo y definir reglas de seguridad. La autenticación ya fue migrada a Firebase Authentication en esta rama. Configurar el primer usuario administrador y publicar las reglas antes de ingresar datos reales.
 
 Una vez reforzada la autenticacion, crear o importar un usuario administrador autorizado en la base Martinelli. No incluir contraseñas ni secretos en GitHub. La nueva base puede estar vacia inicialmente; la interfaz no generara registros por si sola.
 
