@@ -1087,91 +1087,82 @@ window.resetSucForm = () => {
     document.getElementById('new-suc-cancel').classList.add('hidden'); 
 };
 
-window.handleSaveUser = async (e) => { 
+window.handleSaveUser = async e => {
     e.preventDefault();
     e.stopImmediatePropagation();
-    
     const btn = e.submitter || document.getElementById('new-user-submit');
-
-    if (window.state.isSubmittingUser || (btn && btn.disabled)) {
-        return;
-    }
-    
+    if (window.state.isSubmittingUser || (btn && btn.disabled)) return;
     window.state.isSubmittingUser = true;
-    
-    if (btn) {
-        window.setBtnLoader(btn, true);
-    }
-    
+    if (btn) window.setBtnLoader(btn, true);
     try {
-        const n = document.getElementById('new-user-name').value; 
-        const em = document.getElementById('new-user-email').value; 
-        const r = document.getElementById('new-user-rol').value; 
-        const s = document.getElementById('new-user-suc').value; 
-        const p = document.getElementById('new-user-pwd').value; 
-        
-        if (window.state.editingUserId) { 
-            const dataUpdate = { nombre: n, email: em, rol: r, sucursalId: s }; 
-            
-            if (p) { 
-                dataUpdate.password = p; 
-                dataUpdate.isFirstLogin = true; 
-            } 
-            
-            await window.fbUpdate("usuarios", window.state.editingUserId, dataUpdate); 
-        } else { 
-            await window.fbAdd("usuarios", { 
-                nombre: n, 
-                email: em, 
-                rol: r, 
-                sucursalId: s, 
-                password: p, 
-                isFirstLogin: true 
-            }); 
-        } 
-        
-        window.resetUserForm(); 
-        
+        if (window.state.currentUser?.rol !== 'Admin') throw new Error('Solo el administrador puede administrar usuarios.');
+        const nombre = document.getElementById('new-user-name').value.trim();
+        const email = document.getElementById('new-user-email').value.trim().toLowerCase();
+        const rol = document.getElementById('new-user-rol').value;
+        const sucursalId = document.getElementById('new-user-suc').value || null;
+        const password = document.getElementById('new-user-pwd').value;
+        if (!nombre || !email || !['Admin','Encargado','Vendedor'].includes(rol)) throw new Error('Verificá los datos del usuario.');
+        if (window.state.editingUserId) {
+            const original = window.state.usuarios.find(u => u.id === window.state.editingUserId);
+            if (!original) throw new Error('Usuario no encontrado.');
+            if (original.email?.toLowerCase() !== email) throw new Error('El correo de ingreso no se puede modificar desde este formulario.');
+            if (original.id === window.state.currentUser.id && rol !== 'Admin') throw new Error('No podés quitarte tu propio permiso de administrador.');
+            await window.fbUpdate('usuarios', original.id, { nombre, rol, sucursalId });
+        } else {
+            if (password.length < 6) throw new Error('La contraseña debe tener al menos seis caracteres.');
+            const uid = await window.fbCreateStaff(email, password, { nombre, rol, sucursalId });
+            const user = { id: uid, nombre, email, rol, sucursalId, activo: true };
+            window.state.usuarios.push(user);
+            window.reRenderActiveViews?.();
+        }
+        window.resetUserForm();
+        window.renderAdminView?.();
     } catch (err) {
-        console.error("Error guardando usuario:", err);
+        console.error('Error al guardar usuario:', err);
+        alert('No se pudo guardar el usuario: ' + (err?.message || 'Error de Firebase'));
     } finally {
         window.state.isSubmittingUser = false;
-        
-        if (btn) {
-            window.setBtnLoader(btn, false);
-        }
+        if (btn) window.setBtnLoader(btn, false);
     }
 };
-
-window.editUser = (id) => { 
-    window.state.editingUserId = id; 
-    const usuario = window.state.usuarios.find(x => x.id === id); 
-    
-    document.getElementById('new-user-name').value = usuario.nombre; 
-    document.getElementById('new-user-email').value = usuario.email; 
-    document.getElementById('new-user-rol').value = usuario.rol; 
-    document.getElementById('new-user-suc').value = usuario.sucursalId; 
-    document.getElementById('new-user-pwd').required = false; 
-    document.getElementById('new-user-cancel').classList.remove('hidden'); 
+window.editUser = id => {
+    const u = window.state.usuarios.find(x => x.id === id);
+    if (!u) return;
+    window.state.editingUserId = id;
+    document.getElementById('new-user-name').value = u.nombre || '';
+    const emailInput = document.getElementById('new-user-email');
+    emailInput.value = u.email || '';
+    emailInput.readOnly = true;
+    document.getElementById('new-user-rol').value = u.rol;
+    document.getElementById('new-user-suc').value = u.sucursalId || '';
+    const pwd = document.getElementById('new-user-pwd');
+    pwd.value = '';
+    pwd.required = false;
+    pwd.disabled = true;
+    document.getElementById('new-user-auth-help').innerText = 'Editar perfil: la contraseña se cambia desde el correo de recuperación, no aquí.';
+    document.getElementById('new-user-cancel').classList.remove('hidden');
 };
-
-window.deleteUser = async (id) => { 
-    if (id === window.state.currentUser.id) {
-        return alert('No puedes eliminar tu propio usuario.'); 
-    }
-    
-    if (confirm('¿Eliminar este usuario de forma permanente?')) {
-        await window.fbDelete("usuarios", id); 
-    }
+window.deleteUser = async id => {
+    if (id === window.state.currentUser.id) return alert('No podés eliminar tu propio usuario.');
+    if (!confirm('¿Deshabilitar el acceso de este usuario? Su cuenta de Authentication seguirá existiendo, pero no podrá entrar al sistema.')) return;
+    try {
+        await window.fbUpdate('usuarios', id, { activo: false });
+        window.renderAdminView?.();
+        alert('Acceso deshabilitado. El historial se conserva.');
+    } catch (err) { alert('No se pudo deshabilitar: ' + err.message); }
 };
-
-window.resetUserForm = () => { 
-    window.state.editingUserId = null; 
-    document.getElementById('new-user-name').value = ''; 
-    document.getElementById('new-user-email').value = ''; 
-    document.getElementById('new-user-pwd').value = ''; 
-    document.getElementById('new-user-pwd').required = true; 
-    document.getElementById('new-user-cancel').classList.add('hidden'); 
+window.resetUserForm = () => {
+    window.state.editingUserId = null;
+    document.getElementById('new-user-name').value = '';
+    const email = document.getElementById('new-user-email');
+    email.value = '';
+    email.readOnly = false;
+    const pwd = document.getElementById('new-user-pwd');
+    pwd.value = '';
+    pwd.disabled = false;
+    pwd.required = true;
+    document.getElementById('new-user-auth-help').innerText = 'Los usuarios se crean en Firebase Authentication. La contraseña nunca se guarda en Firestore.';
+    document.getElementById('new-user-cancel').classList.add('hidden');
 };
 
 // --------------------------------------------------------
