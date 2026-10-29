@@ -81,64 +81,58 @@ window.fbDelete = async (coleccion, id) => {
     }
 };
 
-// --- INICIALIZACIÓN DE LA APP ---
-window.checkSessionAndReady = () => {
-    const loaderElement = document.getElementById('app-loader');
-    if (loaderElement) {
-        loaderElement.style.opacity = '0';
-        setTimeout(() => {
-            loaderElement.classList.add('hidden');
-        }, 500);
-    }
-
-    const session = localStorage.getItem('martinelli_session');
-    if (session) {
-        window.state.currentUser = JSON.parse(session);
-        if (window.launchApp) window.launchApp();
-    } else {
-        if (window.showLogin) window.showLogin();
-    }
-};
-
-window.bootApp = async () => {
+// --- FIREBASE AUTH: cargar datos solo despues de una sesion real ---
+window.bootApp = async (authUser) => {
+    const loader = document.getElementById('app-loader');
     try {
-        const [
-            autosSnap, usuariosSnap, sucursalesSnap, transaccionesSnap, 
-            ventasSnap, formulariosSnap, consultasSnap, comisionesSnap, cierresSnap
-        ] = await Promise.all([
-            window.getDocs(window.collection(window.db, "autos")),
-            window.getDocs(window.collection(window.db, "usuarios")),
-            window.getDocs(window.collection(window.db, "sucursales")),
-            window.getDocs(window.collection(window.db, "transacciones")),
-            window.getDocs(window.collection(window.db, "ventas")),
-            window.getDocs(window.collection(window.db, "formularios")),
-            window.getDocs(window.collection(window.db, "consultas")),
-            window.getDocs(window.collection(window.db, "comisiones")),
-            window.getDocs(window.collection(window.db, "cierres_personal"))
-        ]);
-
-        window.state.autos = autosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        window.state.usuarios = usuariosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        window.state.sucursales = sucursalesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        window.state.transacciones = transaccionesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        window.state.ventas = ventasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        window.state.formularios = formulariosSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        window.state.consultas = consultasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        window.state.comisiones = comisionesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        window.state.cierres_personal = cierresSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        if (window.initSelects) window.initSelects();
-        
-        window.checkSessionAndReady();
-
-    } catch (error) {
-        console.error("Error cargando datos de Firebase:", error);
-        window.checkSessionAndReady(); // Desbloquea la pantalla si hay error de red
-    }
+        const profileRef = window.doc(window.db, 'usuarios', authUser.uid);
+        const profile = await window.fbGetDoc(profileRef);
+        if (!profile.exists() || profile.data().activo === false) {
+            throw new Error('El usuario no tiene un perfil activo en la colección usuarios. Contactá al administrador.');
+        }
+        const p = profile.data();
+        if (!['Admin','Encargado','Vendedor'].includes(p.rol)) {
+            throw new Error('El usuario no tiene un rol válido.');
+        }
+        // El identificador siempre proviene de Authentication, nunca de localStorage.
+        window.state.currentUser = { ...p, id: authUser.uid, email: authUser.email };
+        const names = ['autos','usuarios','sucursales','transacciones',
+                       'ventas','formularios','consultas','comisiones','cierres_personal'];
+        const results = await Promise.all(names.map(name =>
+            window.fbGetDocsFromServer(window.collection(window.db, name))
+        ));
+        names.forEach((name, i) => {
+            window.state[name] = results[i].docs.map(d => ({ id: d.id, ...d.data() }));
+        });
+        window.initSelects?.();
+        window.launchApp?.();
+    } catch (e) {
+        console.error('Error al iniciar Martinelli:', e);
+        window.state.currentUser = null;
+        try { await window.fbSignOut(window.fbAuth); } catch (_) {}
+        window.showLogin?.();
+        const error = document.getElementById('login-error');
+        if (error) {
+            error.innerText = e.message || 'No fue posible iniciar la aplicación.';
+            error.classList.remove('hidden');
+        }
+    } finally { loader?.classList.add('hidden'); }
 };
-
-document.addEventListener("DOMContentLoaded", () => {
-    setTimeout(() => {
-        window.bootApp();
-    }, 100);
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await window.firebaseReady;
+        window.fbOnAuthStateChanged(window.fbAuth, async user => {
+            if (user) {
+                await window.bootApp(user);
+            } else {
+                window.state.currentUser = null;
+                document.getElementById('app-loader')?.classList.add('hidden');
+                window.showLogin?.();
+            }
+        });
+    } catch (e) {
+        console.error('No se pudo inicializar Firebase:', e);
+        document.getElementById('app-loader')?.classList.add('hidden');
+        window.showLogin?.();
+    }
 });
