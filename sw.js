@@ -1,22 +1,34 @@
-const CACHE_NAME = 'martinelli-erp-v1';
-
-// Instalación del Service Worker
-self.addEventListener('install', (event) => {
-  self.skipWaiting(); // Obliga a activar la nueva versión inmediatamente
+/* Martinelli Autos - cache v3: actualiza HTML y scripts antes de servir el cache. */
+const CACHE_NAME = "martinelli-auto-cache-v3";
+const ASSETS = ["./","./index.html","./icon.png","./manifest.json","./js/backup.js","./js/recovery.js"];
+self.addEventListener("install", event => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    try { await cache.addAll(ASSETS); } catch (e) { console.warn("Cache inicial incompleto", e); }
+    await self.skipWaiting();
+  })());
 });
-
-// Activación y limpieza de caches antiguos
-self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+self.addEventListener("activate", event => {
+  event.waitUntil((async () => {
+    const names = await caches.keys();
+    await Promise.all(names.filter(x => x !== CACHE_NAME).map(x => caches.delete(x)));
+    await self.clients.claim();
+  })());
 });
-
-// Interceptar peticiones (Fetch)
-// Para esta app dinámica, usamos una estrategia simple de "Network First" o simplemente dejamos pasar la red.
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    fetch(event.request).catch(() => {
-      // Si falla la red, intentar buscar en caché (para el futuro modo offline)
-      return caches.match(event.request);
-    })
-  );
+self.addEventListener("fetch", event => {
+  if (event.request.method !== "GET") return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+  const fresh = event.request.mode === "navigate" || /\.(?:js|html|css)$/i.test(url.pathname);
+  if (fresh) {
+    event.respondWith(fetch(event.request).then(response => {
+      if (response.ok) {
+        const cloned = response.clone();
+        caches.open(CACHE_NAME).then(c => c.put(event.request, cloned)).catch(() => {});
+      }
+      return response;
+    }).catch(() => caches.match(event.request)));
+  } else {
+    event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request)));
+  }
 });
