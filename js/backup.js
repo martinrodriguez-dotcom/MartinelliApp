@@ -67,7 +67,7 @@ async function makeZip(snapshot){
  const rows=csvRows(snapshot.colecciones.transacciones,snapshot.colecciones.usuarios);
  z.file("caja_movimientos.csv",csv(rows));
  if(window.XLSX)z.file("caja_movimientos.xlsx",await xlsx(rows).arrayBuffer());
- z.file("LEEME.txt","Martinelli Autos: respaldo completo "+snapshot.fecha+"\nContiene informacion personal y credenciales: guardar en carpeta privada.\nPara recuperar: menu Recuperacion, cargar ZIP, comparar y confirmar.\nSolo agrega faltantes y no sobrescribe documentos existentes.\n");
+ z.file("LEEME.txt","Martinelli Autos: respaldo completo "+snapshot.fecha+"\nContiene informacion personal y financiera: guardar en carpeta privada. No incluye credenciales ni cuentas de Firebase Authentication.\nPara recuperar: menu Recuperacion, cargar ZIP, comparar y confirmar.\nSolo agrega faltantes y no sobrescribe documentos existentes.\n");
  return z.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});
 }
 const IDB="martinelli_backup_directory_v1";
