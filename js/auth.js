@@ -1,152 +1,84 @@
-// ==========================================
-// js/auth.js
-// ==========================================
-
-window.handleLogin = async (e) => {
-  e.preventDefault();
-  
+// Martinelli Autos - Inicio de sesión con Firebase Authentication.
+// Las claves de usuario no se almacenan ni se consultan en Firestore.
+window.handleLogin = async (event) => {
+  event.preventDefault();
   const email = document.getElementById('login-email').value.trim().toLowerCase();
-  const pwd = document.getElementById('login-pwd').value;
-  const btnText = document.getElementById('login-btn-text');
-  const errorDiv = document.getElementById('login-error');
-
-  if (!email || !pwd) return;
-
-  // Estado de carga en el botón
-  if (btnText) {
-    btnText.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i>';
-  }
-  if (errorDiv) {
-    errorDiv.classList.add('hidden');
-  }
-  if (window.lucide) window.lucide.createIcons();
-
+  const password = document.getElementById('login-pwd').value;
+  const text = document.getElementById('login-btn-text');
+  const error = document.getElementById('login-error');
+  if (!email || !password) return;
+  if (text) text.textContent = 'Verificando acceso...';
+  if (error) error.classList.add('hidden');
   try {
-    // Buscar usuario en Firebase
-    const usersRef = window.collection(window.db, "usuarios");
-    const snapshot = await window.getDocs(usersRef);
-    let validUser = null;
-
-    snapshot.forEach(doc => {
-      const u = doc.data();
-      if (u.email && u.email.toLowerCase() === email && u.password === pwd) {
-        validUser = { id: doc.id, ...u };
-      }
-    });
-
-    if (validUser) {
-      window.state.currentUser = validUser;
-      localStorage.setItem('martinelli_session', JSON.stringify(validUser));
-      
-      // Lanzar el sistema
-      window.launchApp();
-    } else {
-      if (errorDiv) {
-        errorDiv.innerText = "Credenciales incorrectas. Intente nuevamente.";
-        errorDiv.classList.remove('hidden');
-      }
+    await window.fbSignIn(window.fbAuth, email, password);
+    // onAuthStateChanged en js/app.js carga perfil, roles y datos.
+  } catch (e) {
+    console.error('Inicio de sesión Martinelli:', e.code || e.message);
+    if (error) {
+      error.innerText = 'No se pudo iniciar sesión. Revisá correo, contraseña y que Email/Password esté habilitado en Firebase Authentication.';
+      error.classList.remove('hidden');
     }
-  } catch (error) {
-    console.error("Error en login:", error);
-    if (errorDiv) {
-      errorDiv.innerText = "Error de conexión con la base de datos.";
-      errorDiv.classList.remove('hidden');
-    }
-  } finally {
-    if (btnText) {
-      btnText.innerText = "Ingresar al Sistema";
-    }
+  } finally { if (text) text.textContent = 'Ingresar al Sistema'; }
+};
+window.resetLoginPassword = async () => {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  if (!email) return alert('Primero escribí tu correo electrónico.');
+  try {
+    await window.fbSendPasswordReset(window.fbAuth, email);
+    alert('Si el correo tiene una cuenta habilitada, recibirás instrucciones para restablecer la contraseña.');
+  } catch (e) {
+    console.error('Restablecer contraseña:', e.code || e.message);
+    alert('No se pudo solicitar el cambio de contraseña. Revisá la configuración de Firebase Authentication.');
   }
 };
-
 window.updateProfileUI = () => {
-  const u = window.state.currentUser;
-  if (!u) return;
-
-  const nameDisplay = document.getElementById('user-name-display');
-  const roleDisplay = document.getElementById('user-role-display');
-  const initialDisplay = document.getElementById('user-initial');
-  const adminMenu = document.getElementById('admin-menu');
-
-  if (nameDisplay) nameDisplay.innerText = u.nombre || 'Usuario';
-  if (roleDisplay) roleDisplay.innerText = u.rol || 'Vendedor';
-  if (initialDisplay) initialDisplay.innerText = String(u.nombre || 'U').charAt(0).toUpperCase();
-
-  // Mostrar menú de administración solo si el rol es Admin
-  if (adminMenu) {
-    if (u.rol === 'Admin') {
-      adminMenu.classList.remove('hidden');
-    } else {
-      adminMenu.classList.add('hidden');
-    }
-  }
-  const backupButton = document.getElementById('topbar-backup');
-  if (backupButton) {
-    backupButton.classList.toggle('hidden', u.rol !== 'Admin');
-    backupButton.classList.toggle('flex', u.rol === 'Admin');
+  const user = window.state.currentUser;
+  if (!user) return;
+  const name = document.getElementById('user-name-display');
+  const role = document.getElementById('user-role-display');
+  const initial = document.getElementById('user-initial');
+  const menu = document.getElementById('admin-menu');
+  if (name) name.innerText = user.nombre || 'Usuario';
+  if (role) role.innerText = user.rol || 'Vendedor';
+  if (initial) initial.innerText = String(user.nombre || 'U')[0].toUpperCase();
+  if (menu) menu.classList.toggle('hidden', user.rol !== 'Admin');
+  const backup = document.getElementById('topbar-backup');
+  if (backup) {
+    backup.classList.toggle('hidden', user.rol !== 'Admin');
+    backup.classList.toggle('flex', user.rol === 'Admin');
   }
 };
-
 window.showLogin = () => {
-  // 1. Ocultar Loader
-  const loader = document.getElementById('app-loader');
-  if (loader) loader.classList.add('hidden');
-  
-  // 2. Ocultar App
-  const appWrapper = document.getElementById('app-wrapper');
-  if (appWrapper) appWrapper.classList.add('hidden');
-  
-  // 3. Mostrar Vista de Login
-  const authView = document.getElementById('auth-view');
-  if (authView) authView.classList.remove('hidden');
+  document.getElementById('app-loader')?.classList.add('hidden');
+  document.getElementById('app-wrapper')?.classList.add('hidden');
+  document.getElementById('auth-view')?.classList.remove('hidden');
 };
-
 window.launchApp = () => {
-  // 1. Ocultar Loader
-  const loader = document.getElementById('app-loader');
-  if (loader) loader.classList.add('hidden');
-  
-  // 2. Ocultar Vista de Login
-  const authView = document.getElementById('auth-view');
-  if (authView) authView.classList.add('hidden');
-  
-  // 3. Mostrar App
-  const appWrapper = document.getElementById('app-wrapper');
-  if (appWrapper) appWrapper.classList.remove('hidden');
-
-  // 4. Actualizar la UI del perfil lateral
+  document.getElementById('app-loader')?.classList.add('hidden');
+  document.getElementById('auth-view')?.classList.add('hidden');
+  document.getElementById('app-wrapper')?.classList.remove('hidden');
   window.updateProfileUI();
-  
-  // 5. Forzar el renderizado completo de las vistas
-  if (window.renderAllViews) {
-    window.renderAllViews();
-  }
-  
-  // 6. Ir a la pestaña de Flota por defecto
-  if (window.switchTab) {
-    window.switchTab('flota');
-  }
+  window.renderAllViews?.();
+  window.switchTab?.('flota');
 };
-
-window.handleLogout = () => {
-  if (confirm('¿Estás seguro que deseas cerrar la sesión?')) {
+window.handleLogout = async () => {
+  if (!confirm('¿Estás seguro de cerrar sesión?')) return;
+  try {
+    await window.fbSignOut(window.fbAuth);
     window.state.currentUser = null;
-    localStorage.removeItem('martinelli_session');
-    
-    // Limpiar campos del formulario de login por seguridad
-    const emailInput = document.getElementById('login-email');
-    const pwdInput = document.getElementById('login-pwd');
-    if (emailInput) emailInput.value = '';
-    if (pwdInput) pwdInput.value = '';
-    
+    window.state.usuarios = [];
+    window.state.transacciones = [];
+    window.state.autos = [];
+    window.state.ventas = [];
+    window.state.formularios = [];
+    window.state.consultas = [];
+    window.state.comisiones = [];
+    window.state.sucursales = [];
+    window.state.cierres_personal = [];
+    document.getElementById('login-pwd').value = '';
     window.showLogin();
-  }
+  } catch (e) { alert('No se pudo cerrar sesión: ' + e.message); }
 };
-
-// Asignar el evento submit al formulario de login cuando el DOM esté listo
-document.addEventListener("DOMContentLoaded", () => {
-  const loginForm = document.getElementById('login-form');
-  if (loginForm) {
-    loginForm.addEventListener('submit', window.handleLogin);
-  }
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('login-form')?.addEventListener('submit', window.handleLogin);
 });
